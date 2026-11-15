@@ -115,52 +115,50 @@ class AlgorithmOutputCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final rows = group.memberReadings;
     final c = group.card;
-    return RepaintBoundary(
-      child: Container(
-        decoration: _cardBox(),
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _idChip(c.id),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        c.title,
-                        style: const TextStyle(
-                          color: _ink,
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w800,
-                        ),
+    return Container(
+      decoration: _cardBox(),
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _idChip(c.id),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      c.title,
+                      style: const TextStyle(
+                        color: _ink,
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w800,
                       ),
-                      Text(
-                        'Spec ${c.specRef} · ${c.purpose}',
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: _muted,
-                          fontSize: 11,
-                          height: 1.3,
-                        ),
+                    ),
+                    Text(
+                      'Spec ${c.specRef} · ${c.purpose}',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: _muted,
+                        fontSize: 11,
+                        height: 1.3,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            for (var i = 0; i < rows.length; i++) ...[
-              MarkerReadingRow(reading: rows[i]),
-              if (i != rows.length - 1) const Divider(height: 1, color: _outline),
+              ),
             ],
+          ),
+          const SizedBox(height: 6),
+          for (var i = 0; i < rows.length; i++) ...[
+            MarkerReadingRow(reading: rows[i]),
+            if (i != rows.length - 1) const Divider(height: 1, color: _outline),
           ],
-        ),
+        ],
       ),
     );
   }

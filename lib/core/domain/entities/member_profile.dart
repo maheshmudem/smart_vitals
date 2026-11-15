@@ -243,7 +243,6 @@ class SubjectProfile {
 
   SubjectProfile copyWith({
     String? fullName,
-    String? relationship,
     int? ageYears,
     int? ageHoursForNewborn,
     int? gestationWeeksForNewborn,
@@ -267,7 +266,7 @@ class SubjectProfile {
     return SubjectProfile(
       id: id,
       fullName: fullName ?? this.fullName,
-      relationship: relationship ?? this.relationship,
+      relationship: relationship,
       ageYears: ageYears ?? this.ageYears,
       ageHoursForNewborn: ageHoursForNewborn ?? this.ageHoursForNewborn,
       gestationWeeksForNewborn:

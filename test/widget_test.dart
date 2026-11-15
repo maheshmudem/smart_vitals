@@ -450,37 +450,27 @@ void main() {
           await tester.pumpAndSettle();
 
           expect(find.text('VitalsMirror'), findsOneWidget);
-          expect(find.text('Home'), findsOneWidget);
-          expect(find.text('Packs'), findsOneWidget);
-          expect(find.text('Scans'), findsOneWidget);
+          expect(find.text('Home (S-C01)'), findsOneWidget);
+          expect(find.text('Health Packs'), findsOneWidget);
+          expect(find.text('Screenings (S-C02)'), findsOneWidget);
 
           // Switch to Health Packs tab
-          await tester.tap(find.text('Packs'));
+          await tester.tap(find.text('Health Packs'));
           await tester.pumpAndSettle();
-          expect(find.text('Health Packs'), findsOneWidget);
+          expect(find.text('Curated Health Check Packages'), findsOneWidget);
 
           // Switch to Separate Individual Screenings tab (S-C02)
-          await tester.tap(find.text('Scans'));
+          await tester.tap(find.text('Screenings (S-C02)'));
           await tester.pumpAndSettle();
           expect(find.textContaining('Vitals Scan (Face rPPG)'), findsWidgets);
 
-          // Switch to More tab (S-C07); developer tools live in a
-          // collapsed section at the bottom.
-          await tester.tap(find.text('More'));
+          // Switch to More & 82 Screens tab (S-C07)
+          await tester.tap(find.text('More & 82 Screens'));
           await tester.pumpAndSettle();
-          await tester.dragUntilVisible(
-            find.text('Developer tools'),
-            find.byType(ListView).first,
-            const Offset(0, -200),
+          expect(
+            find.text('82-Screen, 37-Gate & Lifecycle Reference Browser'),
+            findsOneWidget,
           );
-          expect(find.text('Developer tools'), findsOneWidget);
-          await tester.ensureVisible(find.text('Developer tools'));
-          await tester.pumpAndSettle();
-          await tester.tap(find.text('Developer tools'));
-          await tester.pumpAndSettle();
-          await tester.ensureVisible(find.text('Screen catalogue'));
-          await tester.pumpAndSettle();
-          expect(find.text('Screen catalogue'), findsOneWidget);
         },
       );
 
@@ -507,19 +497,19 @@ void main() {
 
           // 1. All 5 MainShellScreen tabs at 360x780
           await pumpScreen(const MainShellScreen());
-          await tester.tap(find.text('Packs'));
+          await tester.tap(find.text('Health Packs'));
           await tester.pump(const Duration(milliseconds: 300));
           expect(tester.takeException(), isNull);
 
-          await tester.tap(find.text('Scans'));
+          await tester.tap(find.text('Screenings (S-C02)'));
           await tester.pump(const Duration(milliseconds: 300));
           expect(tester.takeException(), isNull);
 
-          await tester.tap(find.text('History'));
+          await tester.tap(find.text('History & Trends'));
           await tester.pump(const Duration(milliseconds: 300));
           expect(tester.takeException(), isNull);
 
-          await tester.tap(find.text('More'));
+          await tester.tap(find.text('More & 82 Screens'));
           await tester.pump(const Duration(milliseconds: 300));
           expect(tester.takeException(), isNull);
 
@@ -1664,8 +1654,6 @@ void main() {
             find.widgetWithText(FilledButton, 'Camera connected — continue'),
           );
           expect(cont().onPressed, isNull);
-          await tester.ensureVisible(find.text('Connect camera'));
-          await tester.pump();
           await tester.tap(find.text('Connect camera'));
           await tester.pump(const Duration(milliseconds: 200));
           expect(find.text('Pairing…'), findsOneWidget);
@@ -1897,17 +1885,17 @@ void main() {
           await tester.pump();
           await tester.pump(const Duration(milliseconds: 400));
 
-          expect(find.text('Dental Report'), findsOneWidget);
+          expect(find.text('FDI Tooth Chart & Caries Report'), findsOneWidget);
           expect(
-            find.text('Caries risk'),
+            find.text('Overall Caries Risk (ALG-DEN-06 / BR-DEN)'),
             findsOneWidget,
           );
           expect(
-            find.text('Gum health'),
+            find.text('Gingival Inflammation Index (ALG-DEN-04)'),
             findsOneWidget,
           );
           expect(
-            find.text('Sealant advice'),
+            find.text('Preventive Pit & Fissure Sealant Advisor (ALG-DEN-07)'),
             findsOneWidget,
           );
           expect(find.text('Retake Scan'), findsOneWidget);
@@ -1936,7 +1924,7 @@ void main() {
           await tester.pump(const Duration(milliseconds: 400));
 
           expect(
-            find.text('Mouth lining classifier'),
+            find.text('OPMD Mucosal Classifier & Grad-CAM Map (ALG-IMG-04)'),
             findsOneWidget,
           );
           expect(find.text('Retake Scan'), findsOneWidget);

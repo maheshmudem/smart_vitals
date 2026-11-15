@@ -252,45 +252,40 @@ class MetricTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final showNumeric = marker.shouldShowNumericValue;
-    final scheme = Theme.of(context).colorScheme;
-    final muted = scheme.onSurfaceVariant;
-    final range = marker.normalRangeLabel;
 
     return Card(
       margin: EdgeInsets.zero,
       child: InkWell(
+        borderRadius: BorderRadius.circular(16),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+          padding: const EdgeInsets.all(12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
-                    child: Tooltip(
-                      message: range == null
-                          ? marker.displayName
-                          : '${marker.displayName} · normal $range',
-                      child: Text(
-                        marker.displayName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: muted,
-                        ),
+                    child: Text(
+                      marker.displayName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
+                  const SizedBox(width: 4),
                   if (marker.isEstimate)
                     Container(
-                      margin: const EdgeInsets.only(left: 4),
+                      margin: const EdgeInsets.only(right: 4),
                       padding: const EdgeInsets.symmetric(
                         horizontal: 5,
-                        vertical: 1,
+                        vertical: 2,
                       ),
                       decoration: BoxDecoration(
                         color: MirrorColors.infoBg,
@@ -299,14 +294,16 @@ class MetricTile extends StatelessWidget {
                       child: const Text(
                         'est.',
                         style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w700,
                           color: MirrorColors.infoFg,
                         ),
                       ),
                     ),
+                  Flexible(child: BandChip(band: marker.band, compact: true)),
                 ],
               ),
+              const SizedBox(height: 6),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.baseline,
                 textBaseline: TextBaseline.alphabetic,
@@ -317,10 +314,9 @@ class MetricTile extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: showNumeric ? 20 : 13,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.3,
-                        color: showNumeric ? scheme.onSurface : muted,
+                        fontSize: showNumeric ? 20 : 13.5,
+                        fontWeight: FontWeight.w800,
+                        color: showNumeric ? null : MirrorColors.inkMutedLight,
                       ),
                     ),
                   ),
@@ -331,32 +327,34 @@ class MetricTile extends StatelessWidget {
                         marker.unit,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w500,
-                          color: muted,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: MirrorColors.inkMutedLight,
                         ),
                       ),
                     ),
                 ],
               ),
+              const SizedBox(height: 6),
               Row(
                 children: [
                   Expanded(
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: BandChip(band: marker.band, compact: true),
+                    child: Text(
+                      marker.statusReason ??
+                          (marker.normalRangeLabel != null
+                              ? 'Normal: ${marker.normalRangeLabel}'
+                              : marker.algorithmId),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 10.5,
+                        color: MirrorColors.inkMutedLight,
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 6),
-                  Text(
-                    '${(marker.confidence * 100).round()}%',
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w600,
-                      color: muted,
-                    ),
-                  ),
+                  const SizedBox(width: 4),
+                  ConfidenceMeter(confidence: marker.confidence),
                 ],
               ),
             ],

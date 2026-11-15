@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/design_system/mirror_theme.dart';
 import '../../core/design_system/mirror_widgets.dart';
-import '../../core/design_system/mirror_ui.dart';
-import '../anaemia/anaemia_ui_kit.dart';
-import '../members/member_screens.dart';
 import '../../core/domain/algorithms/caries_risk_engine.dart';
 import '../../core/domain/algorithms/formulas_engine.dart';
 import '../../core/domain/algorithms/hrv_baevsky_engine.dart';
@@ -41,67 +38,62 @@ class ConsentCenterScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final appState = AppStateScope.of(context);
     final subj = appState.activeSubject;
-    final t = Theme.of(context).textTheme;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Consent'),
+        title: const Text('S-B01 & S-B02 · Consent Center'),
         actions: [
           IconButton(
-            tooltip: 'About this screen',
             icon: const Icon(Icons.info_outline_rounded),
             onPressed: () => showScreenGateLifecycleSheet(context, 'S-B01'),
           ),
         ],
       ),
       body: ListView(
-        padding: MirrorSpace.screen,
+        padding: const EdgeInsets.all(20),
         children: [
-          PageHeading(
-            title: 'Your consents',
-            subtitle: 'For ${subj.fullName} · ${subj.relationship}',
+          Text(
+            'Active Subject: ${subj.fullName} (${subj.relationship})',
+            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
           ),
-          const InfoNote(
-            text:
-                'Screening consent is needed for every scan. Dental consent needs a guardian for children. Training consent is optional and only decides whether your anonymised results help improve the models.',
+          const SizedBox(height: 6),
+          const Text(
+            'Spec §6, §7.1, §8 AUD-11/12 & §11.2: Screening consent (G-04) gates all screens; Dental consent (G-05) requires guardian signature for children; Training consent (G-06) is non-blocking and controls whether paired records enter the 80% training split.',
+            style: TextStyle(fontSize: 13, color: MirrorColors.inkMutedLight),
           ),
-          const SizedBox(height: MirrorSpace.xl),
-          MirrorGroupCard(
-            children: ConsentType.values.map((c) {
-              final record = subj.consents[c];
-              final signed = record?.isSigned ?? false;
-              return SwitchListTile(
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: MirrorSpace.lg,
-                  vertical: 4,
+          const SizedBox(height: 14),
+          ...ConsentType.values.map((c) {
+            final record = subj.consents[c];
+            final signed = record?.isSigned ?? false;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Card(
+                child: SwitchListTile(
+                  title: Text(
+                    '${c.gateCode} · ${c.title}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                    ),
+                  ),
+                  subtitle: Text(
+                    signed
+                        ? 'Signed (${record?.documentVersion ?? "mst_consent_v2.1"})${record?.guardianName != null ? " · Guardian: ${record!.guardianName}" : ""}'
+                        : 'Unsigned — toggle to sign S-B02 consent',
+                    style: const TextStyle(fontSize: 12.5),
+                  ),
+                  value: signed,
+                  onChanged: (v) => appState.toggleConsent(
+                    c,
+                    v,
+                    guardianName: subj.ageYears < 18
+                        ? 'Arjun Rao (Parent)'
+                        : null,
+                  ),
                 ),
-                secondary: IconBadge(
-                  icon: signed
-                      ? Icons.verified_user_rounded
-                      : Icons.shield_outlined,
-                  color: signed
-                      ? MirrorColors.successFg
-                      : Theme.of(context).colorScheme.onSurfaceVariant,
-                  size: 34,
-                ),
-                title: Text(c.title, style: t.titleSmall),
-                subtitle: Text(
-                  signed
-                      ? 'Signed · ${record?.documentVersion ?? "v2.1"}${record?.guardianName != null ? " · Guardian: ${record!.guardianName}" : ""}'
-                      : 'Not signed · switch on to sign',
-                  style: t.bodySmall,
-                ),
-                value: signed,
-                onChanged: (v) => appState.toggleConsent(
-                  c,
-                  v,
-                  guardianName: subj.ageYears < 18
-                      ? 'Arjun Rao (Parent)'
-                      : null,
-                ),
-              );
-            }).toList(),
-          ),
+              ),
+            );
+          }),
         ],
       ),
     );
@@ -146,30 +138,10 @@ class _ProfileAndHealthContextScreenState
     super.dispose();
   }
 
-  Widget _switch({
-    required String title,
-    String? subtitle,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-  }) {
-    return SwitchListTile(
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: MirrorSpace.lg,
-        vertical: 2,
-      ),
-      title: Text(title),
-      subtitle: subtitle == null ? null : Text(subtitle),
-      value: value,
-      onChanged: onChanged,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final appState = AppStateScope.of(context);
     final subj = appState.activeSubject;
-    final scheme = Theme.of(context).colorScheme;
-    final t = Theme.of(context).textTheme;
     final bmi = FormulasEngine.computeBmi(
       weightKg: subj.weightKg,
       heightCm: subj.heightCm,
@@ -181,234 +153,145 @@ class _ProfileAndHealthContextScreenState
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Profile & Health'),
+        title: const Text('S-B03..B06 · Profile, Context & Family'),
         actions: [
           IconButton(
-            tooltip: 'About this screen',
             icon: const Icon(Icons.info_outline_rounded),
             onPressed: () => showScreenGateLifecycleSheet(context, 'S-B03'),
           ),
         ],
       ),
       body: ListView(
-        padding: MirrorSpace.screen,
+        padding: const EdgeInsets.all(20),
         children: [
-          SectionHeader(
-            title: 'Family member',
-            subtitle: 'Scans and results are saved to this person',
-            actionLabel: 'Manage',
-            onAction: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => const ManageMembersScreen(),
-              ),
-            ),
+          const Text(
+            'S-B05 · Active Family Member / Dependent Switcher',
+            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
           ),
+          const SizedBox(height: 8),
           Wrap(
-            spacing: MirrorSpace.sm,
-            runSpacing: MirrorSpace.sm,
+            spacing: 8,
+            runSpacing: 8,
+            children: List.generate(appState.subjects.length, (i) {
+              final s = appState.subjects[i];
+              return ChoiceChip(
+                label: Text('${s.fullName} (${s.relationship})'),
+                selected: appState.activeSubjectIndex == i,
+                onSelected: (_) => appState.selectSubject(i),
+              );
+            }),
+          ),
+          const SizedBox(height: 18),
+          const Text(
+            'S-B03 · Basic Anthropometrics (Gate G-02)',
+            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+          ),
+          const SizedBox(height: 10),
+          Row(
             children: [
-              for (var i = 0; i < appState.subjects.length; i++)
-                Builder(
-                  builder: (context) {
-                    final s = appState.subjects[i];
-                    final selected = appState.activeSubjectIndex == i;
-                    return ChoiceChip(
-                      avatar: MemberAvatar(name: s.fullName, radius: 10),
-                      label: Text(s.fullName.split(' ').first),
-                      selected: selected,
-                      side: BorderSide(
-                        color: selected ? scheme.primary : scheme.outline,
-                      ),
-                      onSelected: (_) => appState.selectSubject(i),
-                    );
-                  },
+              Expanded(
+                child: TextField(
+                  controller: _heightCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'Height (cm)'),
                 ),
-              ActionChip(
-                key: const ValueKey('profile_add_member'),
-                avatar: Icon(
-                  Icons.add_rounded,
-                  size: 18,
-                  color: scheme.primary,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextField(
+                  controller: _weightCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'Weight (kg)'),
                 ),
-                label: Text('Add', style: TextStyle(color: scheme.primary)),
-                side: BorderSide(color: scheme.primary.withValues(alpha: 0.5)),
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const MemberFormScreen(),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextField(
+                  controller: _waistCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Waist (cm · G-03)',
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: MirrorSpace.xl),
-          const SectionHeader(
-            title: 'Body measurements',
-            subtitle: 'Used for BMI, waist-to-height and fitness formulas',
-          ),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(MirrorSpace.lg),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _heightCtrl,
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            labelText: 'Height',
-                            suffixText: 'cm',
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: MirrorSpace.md),
-                      Expanded(
-                        child: TextField(
-                          controller: _weightCtrl,
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            labelText: 'Weight',
-                            suffixText: 'kg',
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: MirrorSpace.md),
-                      Expanded(
-                        child: TextField(
-                          controller: _waistCtrl,
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            labelText: 'Waist',
-                            suffixText: 'cm',
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: MirrorSpace.lg),
-                  Row(
-                    children: [
-                      _metric(
-                        context,
-                        'BMI',
-                        bmi?.toStringAsFixed(1) ?? '--',
-                        'kg/m²',
-                      ),
-                      const SizedBox(width: MirrorSpace.md),
-                      _metric(
-                        context,
-                        'Waist / height',
-                        whtr?.toStringAsFixed(2) ?? '--',
-                        whtr == null ? 'add waist' : 'ratio',
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+          const SizedBox(height: 10),
+          Text(
+            'Live Preview: BMI = ${bmi?.toStringAsFixed(2) ?? "--"} kg/m² · WHtR = ${whtr?.toStringAsFixed(3) ?? "-- (Waist missing)"}',
+            style: const TextStyle(
+              fontWeight: FontWeight.w700,
+              color: MirrorColors.primary,
             ),
           ),
-          const SizedBox(height: MirrorSpace.xl),
-          const SectionHeader(
-            title: 'Health context',
-            subtitle: 'Unlocks screenings that matter for you',
+          const SizedBox(height: 16),
+          const Text(
+            'S-B04 · Extended Health Context (Gates G-03, G-08, G-10)',
+            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
           ),
-          MirrorGroupCard(
-            dividerIndent: MirrorSpace.lg,
-            children: [
-              _switch(
-                title: 'Known diabetes',
-                subtitle: 'Offers a monthly diabetic foot check',
-                value: subj.hasKnownDiabetes,
-                onChanged: (v) => appState.updateActiveSubject(
-                  subj.copyWith(hasKnownDiabetes: v),
-                ),
-              ),
-              _switch(
-                title: 'Tobacco or areca use',
-                subtitle: 'Always offers the mouth-lining check',
-                value: subj.usesTobaccoOrAreca,
-                onChanged: (v) => appState.updateActiveSubject(
-                  subj.copyWith(usesTobaccoOrAreca: v),
-                ),
-              ),
-              if (subj.sex == BiologicalSex.female && subj.ageYears >= 12)
-                _switch(
-                  title: 'Currently pregnant',
-                  subtitle: 'Uses the pregnancy anaemia cut-off (11.0 g/dL)',
-                  value: subj.isPregnant,
+          const SizedBox(height: 8),
+          Card(
+            child: Column(
+              children: [
+                SwitchListTile(
+                  title: const Text(
+                    'Known Diabetes (Offers Monthly Diabetic Foot Screen §6.5)',
+                  ),
+                  value: subj.hasKnownDiabetes,
                   onChanged: (v) => appState.updateActiveSubject(
-                    subj.copyWith(isPregnant: v),
+                    subj.copyWith(hasKnownDiabetes: v),
                   ),
                 ),
-              _switch(
-                title: 'Heart-failure voice programme',
-                subtitle: 'Enables daily voice monitoring',
-                value: subj.isHeartFailureEnrolled,
-                onChanged: (v) => appState.updateActiveSubject(
-                  subj.copyWith(isHeartFailureEnrolled: v),
+                SwitchListTile(
+                  title: const Text(
+                    'Tobacco / Areca Use (Always Offers Oral Cancer Screen §6.4)',
+                  ),
+                  value: subj.usesTobaccoOrAreca,
+                  onChanged: (v) => appState.updateActiveSubject(
+                    subj.copyWith(usesTobaccoOrAreca: v),
+                  ),
                 ),
-              ),
-            ],
+                if (subj.sex == BiologicalSex.female && subj.ageYears >= 12)
+                  SwitchListTile(
+                    title: const Text(
+                      'Currently Pregnant (WHO Anaemia threshold < 11.0 g/dL & Rule T12)',
+                    ),
+                    value: subj.isPregnant,
+                    onChanged: (v) => appState.updateActiveSubject(
+                      subj.copyWith(isPregnant: v),
+                    ),
+                  ),
+                SwitchListTile(
+                  title: const Text(
+                    'Gate G-08 · Enrolled in Heart-Failure Voice Programme (§8 AUD-12)',
+                  ),
+                  value: subj.isHeartFailureEnrolled,
+                  onChanged: (v) => appState.updateActiveSubject(
+                    subj.copyWith(isHeartFailureEnrolled: v),
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: MirrorSpace.xs),
-          Text(
-            'Changes to switches are saved immediately.',
-            style: t.bodySmall,
+          const SizedBox(height: 16),
+          FilledButton.icon(
+            icon: const Icon(Icons.save_rounded),
+            label: const Text('Save Profile & Re-Evaluate Gates'),
+            onPressed: () {
+              final h = double.tryParse(_heightCtrl.text);
+              final w = double.tryParse(_weightCtrl.text);
+              final waist = double.tryParse(_waistCtrl.text);
+              appState.updateActiveSubject(
+                subj.copyWith(heightCm: h, weightKg: w, waistCm: waist),
+              );
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Profile & G-02/G-03 gates updated.'),
+                ),
+              );
+            },
           ),
         ],
-      ),
-      bottomNavigationBar: PrimaryBottomButton(
-        label: 'Save profile',
-        icon: Icons.check_rounded,
-        onPressed: () {
-          final h = double.tryParse(_heightCtrl.text);
-          final w = double.tryParse(_weightCtrl.text);
-          final waist = double.tryParse(_waistCtrl.text);
-          appState.updateActiveSubject(
-            subj.copyWith(heightCm: h, weightKg: w, waistCm: waist),
-          );
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('Profile saved')));
-        },
-      ),
-    );
-  }
-
-  Widget _metric(
-    BuildContext context,
-    String label,
-    String value,
-    String unit,
-  ) {
-    final scheme = Theme.of(context).colorScheme;
-    final t = Theme.of(context).textTheme;
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(MirrorSpace.md),
-        decoration: BoxDecoration(
-          color: scheme.primary.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(MirrorRadius.md),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(label, style: t.labelSmall),
-            const SizedBox(height: 2),
-            Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(
-                    text: value,
-                    style: t.titleLarge?.copyWith(color: scheme.primary),
-                  ),
-                  TextSpan(text: '  $unit', style: t.bodySmall),
-                ],
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -422,147 +305,111 @@ class DeviceReadinessAndHardwareScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final appState = AppStateScope.of(context);
     final dev = appState.deviceProfile;
-    final t = Theme.of(context).textTheme;
-
-    Widget toggle({
-      required IconData icon,
-      required String title,
-      String? subtitle,
-      required bool value,
-      required ValueChanged<bool> onChanged,
-    }) {
-      return SwitchListTile(
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: MirrorSpace.lg,
-          vertical: 2,
-        ),
-        secondary: IconBadge(icon: icon, size: 34),
-        title: Text(title),
-        subtitle: subtitle == null ? null : Text(subtitle),
-        value: value,
-        onChanged: onChanged,
-      );
-    }
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Devices & Sensors'),
+        title: const Text('S-B07 / S-I01 / S-I02 · Device & Hardware Gates'),
         actions: [
           IconButton(
-            tooltip: 'About this screen',
             icon: const Icon(Icons.info_outline_rounded),
             onPressed: () => showScreenGateLifecycleSheet(context, 'S-B07'),
           ),
         ],
       ),
       body: ListView(
-        padding: MirrorSpace.screen,
+        padding: const EdgeInsets.all(20),
         children: [
           Card(
-            child: Padding(
-              padding: const EdgeInsets.all(MirrorSpace.lg),
-              child: Row(
-                children: [
-                  const IconBadge(icon: Icons.phone_android_rounded),
-                  const SizedBox(width: MirrorSpace.md),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(dev.displayName, style: t.titleMedium),
-                        const SizedBox(height: 2),
-                        Text(
-                          '${dev.deviceModelCode} · ${dev.cameraMaxFps} fps camera · ${dev.focalLengthMm} mm lens',
-                          style: t.bodySmall,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+            child: ListTile(
+              leading: const Icon(
+                Icons.phone_android_rounded,
+                color: MirrorColors.primary,
+              ),
+              title: Text(
+                '${dev.displayName} (${dev.deviceModelCode})',
+                style: const TextStyle(fontWeight: FontWeight.w800),
+              ),
+              subtitle: Text(
+                'Camera: ${dev.cameraMaxFps} fps · SpO2 Coeffs: A=${dev.spo2CoeffA}, B=${dev.spo2CoeffB} · Focal: ${dev.focalLengthMm} mm',
               ),
             ),
           ),
-          const SizedBox(height: MirrorSpace.xl),
-          const SectionHeader(
-            title: 'Phone readiness',
-            subtitle: 'Checks that unlock specific scans',
-          ),
-          MirrorGroupCard(
-            children: [
-              toggle(
-                icon: Icons.water_drop_outlined,
-                title: 'SpO2 calibrated for this phone',
-                subtitle: 'If off, oxygen level is hidden',
-                value: dev.hasSpo2Calibration,
-                onChanged: (v) => appState.updateDeviceProfile(
-                  dev.copyWith(hasSpo2Calibration: v),
+          const SizedBox(height: 14),
+          Card(
+            child: Column(
+              children: [
+                SwitchListTile(
+                  title: const Text(
+                    'Gate G-16 · Device Model SpO2 Calibrated (mst_device_model)',
+                  ),
+                  subtitle: const Text(
+                    'Spec §4.5: If false, SpO2 band is hidden and user is advised to use a medical oximeter or Smart Ring.',
+                  ),
+                  value: dev.hasSpo2Calibration,
+                  onChanged: (v) => appState.updateDeviceProfile(
+                    dev.copyWith(hasSpo2Calibration: v),
+                  ),
                 ),
-              ),
-              toggle(
-                icon: Icons.mic_none_rounded,
-                title: 'Microphone check passed',
-                value: dev.micSelfCheckPassed,
-                onChanged: (v) => appState.updateDeviceProfile(
-                  dev.copyWith(micSelfCheckPassed: v),
+                SwitchListTile(
+                  title: const Text(
+                    'Gate G-17 · Mic Self-Check Passed (ALG-CAP-11 <= 6 dB)',
+                  ),
+                  value: dev.micSelfCheckPassed,
+                  onChanged: (v) => appState.updateDeviceProfile(
+                    dev.copyWith(micSelfCheckPassed: v),
+                  ),
                 ),
-              ),
-              toggle(
-                icon: Icons.headphones_outlined,
-                title: 'Earphones connected',
-                subtitle: 'Needed for the hearing test',
-                value: dev.earphonesConnected,
-                onChanged: (v) => appState.updateDeviceProfile(
-                  dev.copyWith(earphonesConnected: v),
+                SwitchListTile(
+                  title: const Text(
+                    'Gate G-19 · Earphones Connected (Hearing Test S-G10)',
+                  ),
+                  value: dev.earphonesConnected,
+                  onChanged: (v) => appState.updateDeviceProfile(
+                    dev.copyWith(earphonesConnected: v),
+                  ),
                 ),
-              ),
-              toggle(
-                icon: Icons.battery_charging_full_rounded,
-                title: 'Phone on charger',
-                subtitle: 'Needed for overnight sleep checks',
-                value: dev.phoneCharging,
-                onChanged: (v) => appState.updateDeviceProfile(
-                  dev.copyWith(phoneCharging: v),
+                SwitchListTile(
+                  title: const Text(
+                    'Gate G-30 · Phone Connected to Charger (Sleep Sonar S-G07)',
+                  ),
+                  value: dev.phoneCharging,
+                  onChanged: (v) => appState.updateDeviceProfile(
+                    dev.copyWith(phoneCharging: v),
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: MirrorSpace.xl),
-          const SectionHeader(title: 'Connected accessories'),
-          MirrorGroupCard(
-            children: [
-              toggle(
-                icon: Icons.flare_rounded,
-                title: 'Clip-on fundus camera',
-                subtitle: 'For retina photos',
-                value: dev.fundusCameraConnected,
-                onChanged: (v) => appState.updateDeviceProfile(
-                  dev.copyWith(fundusCameraConnected: v),
+                SwitchListTile(
+                  title: const Text(
+                    'Gate G-31 · Clip-On Fundus Camera Connected (S-E06)',
+                  ),
+                  value: dev.fundusCameraConnected,
+                  onChanged: (v) => appState.updateDeviceProfile(
+                    dev.copyWith(fundusCameraConnected: v),
+                  ),
                 ),
-              ),
-              toggle(
-                icon: Icons.radio_button_checked_rounded,
-                title: 'Smart ring',
-                subtitle: 'Overnight SpO2, rhythm and temperature',
-                value: dev.smartRingConnected,
-                onChanged: (v) => appState.updateDeviceProfile(
-                  dev.copyWith(smartRingConnected: v),
+                SwitchListTile(
+                  title: const Text(
+                    'Gate G-32 · Smart Ring Connected (S-I01 / S-I02)',
+                  ),
+                  subtitle: const Text(
+                    'Provides overnight SpO2 dips (AUD-08), rhythm flag (RHY-01), and temperature.',
+                  ),
+                  value: dev.smartRingConnected,
+                  onChanged: (v) => appState.updateDeviceProfile(
+                    dev.copyWith(smartRingConnected: v),
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: MirrorSpace.xl),
-          const SectionHeader(title: 'Blood pressure'),
-          MirrorGroupCard(
-            children: [
-              toggle(
-                icon: Icons.speed_rounded,
-                title: 'Show BP numbers',
-                subtitle:
-                    'Only after clinical validation (ISO 81060-2). Otherwise a band is shown.',
-                value: appState.bpNumericValidatedRelease,
-                onChanged: (v) => appState.toggleBpNumericRelease(v),
-              ),
-            ],
+                SwitchListTile(
+                  title: const Text(
+                    'Gate G-24 · BP Numeric Release Validated (ISO 81060-2)',
+                  ),
+                  subtitle: const Text(
+                    'Spec §4.6: Band-only display until mean <= 5 and SD <= 8 mmHg validated.',
+                  ),
+                  value: appState.bpNumericValidatedRelease,
+                  onChanged: (v) => appState.toggleBpNumericRelease(v),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -605,7 +452,9 @@ class _ScreenArchitectureBrowserScreenState
     }).toList();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Screen Catalogue')),
+      appBar: AppBar(
+        title: const Text('82-Screen, 37-Gate & Lifecycle Reference'),
+      ),
       body: Column(
         children: [
           SingleChildScrollView(
@@ -627,7 +476,7 @@ class _ScreenArchitectureBrowserScreenState
           const Divider(height: 1),
           Expanded(
             child: ListView.builder(
-              padding: MirrorSpace.screen,
+              padding: const EdgeInsets.all(16),
               itemCount: screens.length,
               itemBuilder: (context, index) {
                 final s = screens[index];
@@ -892,9 +741,11 @@ class SpecVectorsVerifierScreen extends StatelessWidget {
     ];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Spec Test Vectors')),
+      appBar: AppBar(
+        title: const Text('S-I05 · Live Spec Test Vectors Verification'),
+      ),
       body: ListView.builder(
-        padding: MirrorSpace.screen,
+        padding: const EdgeInsets.all(20),
         itemCount: rows.length,
         itemBuilder: (context, index) {
           final r = rows[index];

@@ -2,14 +2,12 @@ import 'package:flutter/material.dart';
 import '../../core/design_system/algorithm_outputs_section.dart';
 import '../../core/design_system/mirror_theme.dart';
 import '../../core/design_system/mirror_widgets.dart';
-import '../../core/design_system/mirror_ui.dart';
 import '../../core/domain/entities/case_record.dart';
 import '../../core/domain/algorithms/marker_readings.dart';
 import '../../core/domain/entities/enums.dart';
 import '../../core/domain/entities/marker_envelope.dart';
 import '../../core/services/emergency_contacts.dart';
 import '../../core/state/app_state.dart';
-import '../anaemia/anaemia_ui_kit.dart';
 
 /// S-R01 Shared Screening Result Screen (T-RES Template + Specialist Review IMG-10).
 class SharedScreeningResultScreen extends StatelessWidget {
@@ -23,233 +21,408 @@ class SharedScreeningResultScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final t = Theme.of(context).textTheme;
     final confPct = (record.confidence * 100).round().clamp(0, 100);
     final isHigh =
         record.primaryBand == SemanticBand.high ||
         record.primaryBand == SemanticBand.refer ||
         record.urgency != UrgencyLevel.none;
-    final band = BandVisualStyle.forBand(record.primaryBand);
-    final dialColor = isHigh ? MirrorColors.dangerFg : scheme.primary;
+    final dialColor = isHigh
+        ? const Color(0xFFEF4444)
+        : const Color(0xFF00E5CC);
 
     return Scaffold(
+      backgroundColor: const Color(0xFF070D19),
       appBar: AppBar(
-        title: Text(record.title, overflow: TextOverflow.ellipsis),
+        backgroundColor: const Color(0xFF070D19),
+        foregroundColor: Colors.white,
+        title: Text('S-R01 · ${record.title}', overflow: TextOverflow.ellipsis),
         actions: [
           IconButton(
-            tooltip: 'About this screen',
             icon: const Icon(Icons.info_outline_rounded),
             onPressed: () => showScreenGateLifecycleSheet(context, 'S-R01'),
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: MirrorSpace.screen,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // 1. Summary card: confidence dial + band
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(MirrorSpace.lg),
-                child: Row(
-                  children: [
-                    SizedBox(
-                      width: 64,
-                      height: 64,
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          SizedBox(
-                            width: 60,
-                            height: 60,
-                            child: CircularProgressIndicator(
-                              value: (confPct / 100.0).clamp(0.1, 1.0),
-                              strokeWidth: 6,
-                              strokeCap: StrokeCap.round,
-                              backgroundColor: scheme.surfaceContainerHighest,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                dialColor,
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // 1. Hero Screening Score & AI Confidence Dial Card
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF0F172A), Color(0xFF111C2E)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: dialColor.withValues(alpha: 0.45),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: 74,
+                          height: 74,
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              SizedBox(
+                                width: 70,
+                                height: 70,
+                                child: CircularProgressIndicator(
+                                  value: (confPct / 100.0).clamp(0.1, 1.0),
+                                  strokeWidth: 6.5,
+                                  backgroundColor: Colors.white12,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    dialColor,
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.all(8),
-                            child: FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Column(
+                              Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Text(
                                     '$confPct%',
-                                    style: t.titleLarge?.copyWith(
+                                    style: TextStyle(
                                       color: dialColor,
+                                      fontSize: 19,
+                                      fontWeight: FontWeight.w900,
                                       height: 1.0,
                                     ),
                                   ),
-                                  Text('confidence', style: t.labelSmall),
+                                  const Text(
+                                    'CONF',
+                                    style: TextStyle(
+                                      color: Colors.white54,
+                                      fontSize: 8.5,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
                                 ],
                               ),
-                            ),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                record.title,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 15.5,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Band: ${record.primaryBand.label} • Category: ${record.category}',
+                                style: TextStyle(
+                                  color: dialColor,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                record.summaryText,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 11.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: MirrorSpace.lg),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(record.title, style: t.titleMedium),
-                          const SizedBox(height: MirrorSpace.xs),
-                          Text(record.category, style: t.bodySmall),
-                          const SizedBox(height: MirrorSpace.sm),
-                          BandChip(band: record.primaryBand),
-                        ],
-                      ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  if (record.urgency != UrgencyLevel.none) ...[
+                    UrgencyBanner(
+                      urgency: record.urgency,
+                      title: '${record.title} Screening Flag',
+                      subtitle: record.summaryText,
+                      ruleCodes: record.firedRules,
+                      primaryActionLabel: 'Open Cases (S-R04)',
+                      onPrimaryAction: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const CasesListScreen(),
+                          ),
+                        );
+                      },
                     ),
+                    const SizedBox(height: 14),
                   ],
-                ),
+                  if (record.isUnderSpecialistReview) ...[
+                    Card(
+                      color: MirrorColors.infoBg,
+                      child: const ListTile(
+                        leading: Icon(
+                          Icons.medical_services_outlined,
+                          color: MirrorColors.infoFg,
+                        ),
+                        title: Text(
+                          'IMG-10 · Routed to Specialist Review Queue',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 13.5,
+                            color: MirrorColors.infoFg,
+                          ),
+                        ),
+                        subtitle: Text(
+                          'Spec §6 Intro: Every high or uncertain result (probability within ±0.1 of threshold) is reviewed asynchronously by a specialist.',
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            color: MirrorColors.infoFg,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                  ],
+
+                  // Oral Pre-Cancer & Lesion (ALG-IMG-04) Specific Range Scale & Grad-CAM Heatmap Card
+                  if (_isOralLesion) ...[
+                    _buildOralLesionDetailCard(isHigh),
+                    const SizedBox(height: 14),
+                  ],
+
+                  const Text(
+                    'Algorithm outputs',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 15.5,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Spec output markers stored with this record · tap a row for detail',
+                    style: TextStyle(color: Colors.white70, fontSize: 12),
+                  ),
+                  const SizedBox(height: 10),
+                  AlgorithmOutputsSection(
+                    groups: MarkerReadings.fromRecord(record),
+                    showHeader: false,
+                  ),
+                  const SizedBox(height: 16),
+                  const DisclaimerFooter(),
+                ],
               ),
             ),
-            if (record.urgency == UrgencyLevel.none) ...[
-              const SizedBox(height: MirrorSpace.md),
-              Container(
-                padding: const EdgeInsets.all(MirrorSpace.md + 2),
-                decoration: BoxDecoration(
-                  color: band.background,
-                  borderRadius: BorderRadius.circular(MirrorRadius.md),
+          ),
+
+          // Persistent Bottom Action Dock (Retake Scan + Save to Profile)
+          Container(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+            decoration: const BoxDecoration(
+              color: Color(0xFF0F172A),
+              border: Border(top: BorderSide(color: Colors.white12)),
+            ),
+            child: SafeArea(
+              top: false,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        side: const BorderSide(color: Color(0xFF00E5CC)),
+                        minimumSize: const Size.fromHeight(46),
+                      ),
+                      icon: const Icon(Icons.replay_rounded, size: 18),
+                      label: const Text(
+                        'Retake Scan',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                      onPressed: () {
+                        if (Navigator.of(context).canPop()) {
+                          Navigator.of(context).pop();
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF00E5CC),
+                        foregroundColor: const Color(0xFF042F2E),
+                        minimumSize: const Size.fromHeight(46),
+                      ),
+                      icon: const Icon(Icons.check_circle_rounded, size: 18),
+                      label: const Text(
+                        'Save to Profile',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontWeight: FontWeight.w900),
+                      ),
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              '${record.title} report saved to member profile.',
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOralLesionDetailCard(bool isHigh) {
+    final markerPct = isHigh ? 0.84 : 0.18;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F172A),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: const Color(0xFF00E5CC).withValues(alpha: 0.35),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(
+                Icons.auto_awesome_motion_rounded,
+                color: Color(0xFF00E5CC),
+                size: 18,
+              ),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'OPMD Mucosal Classifier & Grad-CAM Map (ALG-IMG-04)',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13.5,
+                  ),
                 ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            isHigh
+                ? 'ORAL_CLASS: High Risk (Leukoplakia / Erythroplakia pattern detected on buccal/tongue mucosa • Aggregated by max_over_views).'
+                : 'ORAL_CLASS: Not Suspicious across all 5 intraoral mucosal sites (Right/Left Buccal, Lateral Tongue, Floor of Mouth, Palate).',
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 11.5,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 16,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Row(
                   children: [
-                    Icon(band.icon, size: 18, color: band.foreground),
-                    const SizedBox(width: MirrorSpace.sm),
                     Expanded(
-                      child: Text(
-                        record.summaryText,
-                        style: TextStyle(
-                          color: band.foreground,
-                          fontSize: 13,
-                          height: 1.4,
+                      child: Container(
+                        height: 6,
+                        margin: const EdgeInsets.symmetric(horizontal: 1.5),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981),
+                          borderRadius: BorderRadius.circular(99),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Container(
+                        height: 6,
+                        margin: const EdgeInsets.symmetric(horizontal: 1.5),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF59E0B),
+                          borderRadius: BorderRadius.circular(99),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Container(
+                        height: 6,
+                        margin: const EdgeInsets.symmetric(horizontal: 1.5),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEF4444),
+                          borderRadius: BorderRadius.circular(99),
                         ),
                       ),
                     ),
                   ],
                 ),
-              ),
-            ],
-            const SizedBox(height: MirrorSpace.xl),
-
-            if (record.urgency != UrgencyLevel.none) ...[
-              UrgencyBanner(
-                urgency: record.urgency,
-                title: '${record.title} flag',
-                subtitle: record.summaryText,
-                ruleCodes: record.firedRules,
-                primaryActionLabel: 'Open cases',
-                onPrimaryAction: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const CasesListScreen(),
+                Align(
+                  alignment: Alignment((markerPct * 2) - 1.0, 0),
+                  child: Container(
+                    width: 14,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: const Color(0xFF070D19),
+                        width: 2.5,
+                      ),
                     ),
-                  );
-                },
-              ),
-              const SizedBox(height: MirrorSpace.xl),
-            ],
-            if (record.isUnderSpecialistReview) ...[
-              const InfoNote(
-                title: 'Sent for specialist review',
-                icon: Icons.medical_services_outlined,
-                text:
-                    'High or borderline results are checked by a specialist. You will be notified when the review is done.',
-              ),
-              const SizedBox(height: MirrorSpace.xl),
-            ],
-
-            if (_isOralLesion) ...[
-              _buildOralLesionDetailCard(context, isHigh),
-              const SizedBox(height: MirrorSpace.xl),
-            ],
-
-            const SectionHeader(
-              title: 'Algorithm outputs',
-              subtitle:
-                  'Markers stored with this result · tap a row for detail',
-            ),
-            AlgorithmOutputsSection(
-              groups: MarkerReadings.fromRecord(record),
-              showHeader: false,
-            ),
-            const SizedBox(height: MirrorSpace.lg),
-            const DisclaimerFooter(),
-          ],
-        ),
-      ),
-      bottomNavigationBar: PrimaryBottomButton(
-        label: 'Save to Profile',
-        icon: Icons.check_circle_rounded,
-        secondaryLabel: 'Retake Scan',
-        onSecondary: () {
-          if (Navigator.of(context).canPop()) {
-            Navigator.of(context).pop();
-          }
-        },
-        onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('${record.title} saved to profile')),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildOralLesionDetailCard(BuildContext context, bool isHigh) {
-    final t = Theme.of(context).textTheme;
-    final markerPct = isHigh ? 0.84 : 0.18;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(MirrorSpace.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const IconBadge(
-                  icon: Icons.auto_awesome_motion_rounded,
-                  size: 36,
-                ),
-                const SizedBox(width: MirrorSpace.md),
-                Expanded(
-                  child: Text('Mouth lining classifier', style: t.titleSmall),
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: MirrorSpace.md),
-            Text(
-              isHigh
-                  ? 'High risk: a leukoplakia / erythroplakia pattern was seen on the cheek or tongue lining.'
-                  : 'Not suspicious across all 5 mouth sites (both cheeks, tongue side, floor of mouth, palate).',
-              style: t.bodyMedium,
-            ),
-            const SizedBox(height: MirrorSpace.lg),
-            RangeGauge(
-              scale: const RangeScale(
-                breakpoints: [0, 1, 2, 3],
-                labels: ['Not suspicious', 'Suspicious', 'High risk'],
-                colors: [
-                  AnaemiaUi.segNormal,
-                  AnaemiaUi.segBorder,
-                  AnaemiaUi.segHigh,
-                ],
+          ),
+          const SizedBox(height: 4),
+          const Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Not Suspicious',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white54, fontSize: 9.5),
+                ),
               ),
-              value: markerPct * 3,
-              pinColor: isHigh ? MirrorColors.dangerFg : MirrorColors.successFg,
-            ),
-          ],
-        ),
+              Expanded(
+                child: Text(
+                  'Suspicious',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white54, fontSize: 9.5),
+                ),
+              ),
+              Expanded(
+                child: Text(
+                  'High Risk',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white54, fontSize: 9.5),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -329,7 +502,7 @@ class _EmergencyAlertScreenState extends State<EmergencyAlertScreen> {
           foregroundColor: Colors.white,
           automaticallyImplyLeading: false,
           title: const Text(
-            'Emergency',
+            'S-R02 · EMERGENCY ALERT (Gate G-37)',
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
           ),
           actions: [
@@ -341,7 +514,7 @@ class _EmergencyAlertScreenState extends State<EmergencyAlertScreen> {
         ),
         body: SafeArea(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            padding: const EdgeInsets.all(24),
             child: ConstrainedBox(
               constraints: BoxConstraints(
                 minHeight: MediaQuery.sizeOf(context).height - 180,
@@ -360,7 +533,7 @@ class _EmergencyAlertScreenState extends State<EmergencyAlertScreen> {
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 24,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w900,
                       height: 1.15,
                     ),
                   ),
@@ -482,41 +655,105 @@ class CasesListScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final appState = AppStateScope.of(context);
     final openCases = appState.cases;
-    final scheme = Theme.of(context).colorScheme;
-    final t = Theme.of(context).textTheme;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Open Cases'),
+        title: const Text('S-R04 · Open Condition Cases (ALG-RSK-07)'),
         actions: [
           IconButton(
-            tooltip: 'About this screen',
             icon: const Icon(Icons.info_outline_rounded),
             onPressed: () => showScreenGateLifecycleSheet(context, 'S-R04'),
           ),
         ],
       ),
       body: ListView(
-        padding: MirrorSpace.screen,
+        padding: const EdgeInsets.all(20),
         children: [
-          PageHeading(
-            title: 'Condition cases',
-            subtitle:
-                'Flags for the same condition within 30 days are merged into one case. Urgent cases are listed first.',
+          const Text(
+            'Spec §10 ALG-RSK-07 & Case T15: Same condition flags within 30 days merge into one open Case (no duplicate cases). Urgent flags are always sorted above Routine flags.',
+            style: TextStyle(fontSize: 13, color: MirrorColors.inkMutedLight),
           ),
+          const SizedBox(height: 12),
+          // S-R07 Sampled Negatives Invitation Banner (Spec §14, FRS REF-03)
+          Card(
+            color: MirrorColors.primaryContainer.withValues(alpha: 0.45),
+            child: ListTile(
+              leading: const Icon(
+                Icons.science_outlined,
+                color: MirrorColors.primary,
+              ),
+              title: const Text(
+                'S-R07 · Sampled-Negative Reference Test Invitation (FRS REF-03)',
+                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5),
+              ),
+              subtitle: const Text(
+                'Spec §14: >= 5% of screen-negative members per screen are offered the reference test each month so sensitivity and NPV can be measured.',
+                style: TextStyle(fontSize: 12),
+              ),
+              trailing: const Icon(Icons.info_outline_rounded),
+              onTap: () => showScreenGateLifecycleSheet(context, 'S-R07'),
+            ),
+          ),
+          const SizedBox(height: 14),
           if (openCases.isEmpty)
-            const EmptyState(
-              icon: Icons.folder_open_rounded,
-              title: 'No open cases',
-              message: 'Flagged results that need a lab test appear here.',
+            const Card(
+              child: Padding(
+                padding: EdgeInsets.all(20),
+                child: Text('No open condition cases.'),
+              ),
             )
           else
-            ...openCases.map((c) {
-              final u = _urgencyColor(c.highestUrgency);
-              return Padding(
-                padding: const EdgeInsets.only(bottom: MirrorSpace.md),
+            ...openCases.map(
+              (c) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
                 child: Card(
-                  child: InkWell(
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.all(14),
+                    title: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '${c.conditionTitle} (${c.conditionCode})',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ),
+                        Chip(
+                          label: Text(
+                            c.highestUrgency.label.toUpperCase(),
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 6),
+                        Text(
+                          'Merged Flags (${c.flags.length}): ${c.flags.map((f) => "${f.triggerDescription} [${f.ruleCode}]").join(" · ")}',
+                          style: const TextStyle(fontSize: 12.5),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Confirmatory Pathway (§13): ${c.confirmatorySpec.investigations}',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: MirrorColors.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                    trailing: const Icon(Icons.chevron_right_rounded),
                     onTap: () {
                       Navigator.of(context).push(
                         MaterialPageRoute<void>(
@@ -524,131 +761,13 @@ class CasesListScreen extends StatelessWidget {
                         ),
                       );
                     },
-                    child: Padding(
-                      padding: const EdgeInsets.all(MirrorSpace.lg),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              IconBadge(
-                                icon: Icons.folder_copy_outlined,
-                                color: u,
-                                size: 34,
-                              ),
-                              const SizedBox(width: MirrorSpace.md),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      c.conditionTitle,
-                                      style: t.titleMedium,
-                                    ),
-                                    Text(
-                                      '${c.flags.length} merged ${c.flags.length == 1 ? "flag" : "flags"} · ${c.conditionCode}',
-                                      style: t.bodySmall,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: MirrorSpace.sm),
-                              MirrorPill(
-                                label: c.highestUrgency.label,
-                                color: u,
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: MirrorSpace.md),
-                          for (final f in c.flags.take(3))
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 4),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 6),
-                                    child: Icon(
-                                      Icons.circle,
-                                      size: 6,
-                                      color: scheme.onSurfaceVariant,
-                                    ),
-                                  ),
-                                  const SizedBox(width: MirrorSpace.sm),
-                                  Expanded(
-                                    child: Text(
-                                      f.triggerDescription,
-                                      style: t.bodyMedium?.copyWith(
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          const SizedBox(height: MirrorSpace.sm),
-                          const Divider(),
-                          const SizedBox(height: MirrorSpace.md),
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.science_outlined,
-                                size: 16,
-                                color: scheme.primary,
-                              ),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  c.confirmatorySpec.investigations,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: t.labelMedium?.copyWith(
-                                    color: scheme.primary,
-                                  ),
-                                ),
-                              ),
-                              Icon(
-                                Icons.chevron_right_rounded,
-                                color: scheme.onSurfaceVariant,
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
                   ),
                 ),
-              );
-            }),
-          const SizedBox(height: MirrorSpace.md),
-          // S-R07 Sampled Negatives Invitation (Spec §14, FRS REF-03)
-          MirrorGroupCard(
-            children: [
-              MirrorNavTile(
-                icon: Icons.science_outlined,
-                title: 'Reference test invitations',
-                subtitle:
-                    'Some members with normal results are invited to a lab test so accuracy can be measured.',
-                trailing: Icon(
-                  Icons.info_outline_rounded,
-                  color: scheme.onSurfaceVariant,
-                ),
-                onTap: () => showScreenGateLifecycleSheet(context, 'S-R07'),
               ),
-            ],
-          ),
+            ),
         ],
       ),
     );
-  }
-
-  static Color _urgencyColor(UrgencyLevel u) {
-    return switch (u) {
-      UrgencyLevel.none => MirrorColors.successFg,
-      UrgencyLevel.routine => MirrorColors.warningFg,
-      UrgencyLevel.urgent || UrgencyLevel.emergency => MirrorColors.dangerFg,
-    };
   }
 }
 
@@ -678,7 +797,6 @@ class _CaseDetailScreenState extends State<CaseDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final appState = AppStateScope.of(context);
-    final t = Theme.of(context).textTheme;
     final c =
         appState.cases
             .where((item) => item.caseId == widget.caseRecord.caseId)
@@ -688,87 +806,91 @@ class _CaseDetailScreenState extends State<CaseDetailScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(c.conditionTitle, overflow: TextOverflow.ellipsis),
+        title: Text('S-R05 · ${c.conditionTitle}'),
         actions: [
           IconButton(
-            tooltip: 'About this screen',
             icon: const Icon(Icons.info_outline_rounded),
             onPressed: () => showScreenGateLifecycleSheet(context, 'S-R05'),
           ),
         ],
       ),
       body: ListView(
-        padding: MirrorSpace.screen,
+        padding: const EdgeInsets.all(20),
         children: [
           UrgencyBanner(
             urgency: c.highestUrgency,
             title: '${c.conditionTitle} (${c.conditionCode})',
             subtitle:
-                'Opened ${c.openedAt.toLocal().toString().substring(0, 16)} · ${c.flags.length} flag(s) merged within 30 days.',
+                'Opened ${c.openedAt.toLocal().toString().substring(0, 16)} · ${c.flags.length} flag(s) merged within 30-day window (ALG-RSK-07).',
             ruleCodes: c.flags.map((f) => f.ruleCode).toSet().toList(),
           ),
-          const SizedBox(height: MirrorSpace.xl),
-          const SectionHeader(
-            title: 'Confirmatory tests',
-            subtitle: 'What your doctor will usually order',
-          ),
+          const SizedBox(height: 16),
           Card(
             child: Padding(
-              padding: const EdgeInsets.all(MirrorSpace.lg),
+              padding: const EdgeInsets.all(16),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  AnaemiaUi.kvRow('Why', spec.appTrigger, keyWidth: 96),
-                  const Divider(height: 16),
-                  AnaemiaUi.kvRow('Tests', spec.investigations, keyWidth: 96),
-                  const Divider(height: 16),
-                  AnaemiaUi.kvRow(
-                    'Cut-offs',
-                    spec.usualDiagnosticCutoffs,
-                    keyWidth: 96,
+                  const Text(
+                    'Spec §13 Standard Confirmatory Investigations',
+                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                  ),
+                  const SizedBox(height: 8),
+                  Text('App Trigger: ${spec.appTrigger}'),
+                  const SizedBox(height: 6),
+                  Text('Required Investigations: ${spec.investigations}'),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Usual Diagnostic Cut-offs: ${spec.usualDiagnosticCutoffs}',
                   ),
                 ],
               ),
             ),
           ),
-          const SizedBox(height: MirrorSpace.xl),
-          SectionHeader(
-            title: 'Add a lab result',
-            subtitle: 'Pairs the lab test with your scan',
-            actionLabel: 'Rules',
-            onAction: () => showScreenGateLifecycleSheet(context, 'S-R06'),
-          ),
+          const SizedBox(height: 14),
           Card(
             child: Padding(
-              padding: const EdgeInsets.all(MirrorSpace.lg),
+              padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  AnaemiaUi.kvRow(
-                    'Reference',
-                    spec.pairingReferenceTest,
-                    keyWidth: 96,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'S-R06 · Reference Lab Pairing & Window Check (Spec §14)',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.info_outline_rounded, size: 18),
+                        onPressed: () =>
+                            showScreenGateLifecycleSheet(context, 'S-R06'),
+                      ),
+                    ],
                   ),
-                  AnaemiaUi.kvRow(
-                    'Max gap',
-                    '${spec.maxPairingGapLabel} (${spec.maxPairingHours} h)',
-                    keyWidth: 96,
+                  Text(
+                    'Reference Test: ${spec.pairingReferenceTest}\nMax Gap Allowed: ${spec.maxPairingGapLabel} (${spec.maxPairingHours} h)\nExclusions: ${spec.pairingExclusions}',
+                    style: const TextStyle(fontSize: 12.5, height: 1.4),
                   ),
-                  AnaemiaUi.kvRow(
-                    'Exclusions',
-                    spec.pairingExclusions,
-                    keyWidth: 96,
-                  ),
-                  const SizedBox(height: MirrorSpace.lg),
+                  const SizedBox(height: 12),
                   TextField(
                     controller: _labValueCtrl,
                     decoration: const InputDecoration(
-                      labelText: 'Lab result summary',
+                      labelText: 'Confirmatory Lab Result Summary',
                     ),
                   ),
-                  const SizedBox(height: MirrorSpace.lg),
+                  const SizedBox(height: 10),
                   Text(
-                    'Time between scan and lab test: $_gapHours h',
-                    style: t.titleSmall,
+                    'Simulated Time Gap Between Scan & Lab Test: $_gapHours hours (Max allowed: ${spec.maxPairingHours} h)',
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   Slider(
                     value: _gapHours.toDouble(),
@@ -778,61 +900,62 @@ class _CaseDetailScreenState extends State<CaseDetailScreen> {
                   ),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('An exclusion applies'),
+                    title: Text(
+                      'Exclusion Present (${spec.pairingExclusions})?',
+                    ),
                     subtitle: const Text(
-                      'Pairs outside the window or with an exclusion are graded D and kept for monitoring only.',
+                      'Spec §14 (FRS REF-06): Pairs outside the window or with an exclusion are graded D (monitoring only, excluded from model training).',
+                      style: TextStyle(fontSize: 11.5),
                     ),
                     value: _hasExclusion,
                     onChanged: (v) => setState(() => _hasExclusion = v),
                   ),
-                  const SizedBox(height: MirrorSpace.md),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      icon: const Icon(Icons.upload_file_rounded),
-                      label: const Text('Pair lab result'),
-                      onPressed: () {
-                        final now = DateTime.now();
-                        final pair = ReferenceLabPairingRecord(
-                          id: 'pair_${now.millisecondsSinceEpoch}',
-                          caseId: c.caseId,
-                          referenceTestName: spec.pairingReferenceTest,
-                          resultSummary: _labValueCtrl.text,
-                          scanTimestamp: now.subtract(
-                            Duration(hours: _gapHours),
-                          ),
-                          referenceTimestamp: now,
-                          hasExclusionPresent: _hasExclusion,
-                          maxAllowedHours: spec.maxPairingHours,
-                        );
-                        appState.addLabPairingToCase(c.caseId, pair);
-                      },
-                    ),
+                  const SizedBox(height: 8),
+                  FilledButton.icon(
+                    icon: const Icon(Icons.upload_file_rounded),
+                    label: const Text('Pair Lab Result & Evaluate Grade (A–D)'),
+                    onPressed: () {
+                      final now = DateTime.now();
+                      final pair = ReferenceLabPairingRecord(
+                        id: 'pair_${now.millisecondsSinceEpoch}',
+                        caseId: c.caseId,
+                        referenceTestName: spec.pairingReferenceTest,
+                        resultSummary: _labValueCtrl.text,
+                        scanTimestamp: now.subtract(Duration(hours: _gapHours)),
+                        referenceTimestamp: now,
+                        hasExclusionPresent: _hasExclusion,
+                        maxAllowedHours: spec.maxPairingHours,
+                      );
+                      appState.addLabPairingToCase(c.caseId, pair);
+                    },
                   ),
+                  if (c.pairedLabResults.isNotEmpty) ...[
+                    const Divider(height: 22),
+                    const Text(
+                      'Paired Reference Results:',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 6),
+                    ...c.pairedLabResults.map(
+                      (p) => Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: Text(
+                          '• ${p.resultSummary} (Gap: ${p.gapHours}h) -> ${p.pairingGrade}',
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                            color: p.pairingGrade.startsWith('Grade D')
+                                ? MirrorColors.warningFg
+                                : MirrorColors.successFg,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
           ),
-          if (c.pairedLabResults.isNotEmpty) ...[
-            const SizedBox(height: MirrorSpace.xl),
-            const SectionHeader(title: 'Paired results'),
-            MirrorGroupCard(
-              children: c.pairedLabResults.map((p) {
-                final gradeD = p.pairingGrade.startsWith('Grade D');
-                return MirrorNavTile(
-                  icon: gradeD
-                      ? Icons.warning_amber_rounded
-                      : Icons.check_circle_outline_rounded,
-                  color: gradeD
-                      ? MirrorColors.warningFg
-                      : MirrorColors.successFg,
-                  title: p.resultSummary,
-                  subtitle: 'Gap ${p.gapHours} h · ${p.pairingGrade}',
-                  trailing: const SizedBox.shrink(),
-                );
-              }).toList(),
-            ),
-          ],
         ],
       ),
     );

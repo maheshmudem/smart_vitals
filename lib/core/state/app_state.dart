@@ -97,12 +97,19 @@ class AppState extends ChangeNotifier {
       phoneCharging: true,
     );
 
-    Map<ConsentType, ConsentRecord> buildAllSignedConsents({
-      String? guardian,
-    }) => consentsFor(
-      guardian: guardian,
-      signedAt: now.subtract(const Duration(days: 5)),
-    );
+    Map<ConsentType, ConsentRecord> buildAllSignedConsents({String? guardian}) {
+      return {
+        for (final c in ConsentType.values)
+          c: ConsentRecord(
+            type: c,
+            isSigned: true,
+            documentVersion: 'mst_consent_v2.1',
+            signedAt: now.subtract(const Duration(days: 5)),
+            guardianName: guardian,
+            guardianRelationship: guardian != null ? 'Parent' : null,
+          ),
+      };
+    }
 
     // 1. Adult Self Profile matching Spec §5 worked test vectors (Age 26, Male, 178 cm, 70 kg, 85 cm waist)
     subjects.add(
@@ -260,59 +267,6 @@ class AppState extends ChangeNotifier {
     subjects.add(dependent);
     activeSubjectIndex = subjects.length - 1;
     notifyListeners();
-  }
-
-  // ---------------------------------------------------------------------------
-  // Family-member management (S-B05 / S-B06)
-  // ---------------------------------------------------------------------------
-
-  /// All consents signed with the current document version. Members under 18
-  /// should pass the guardian's name.
-  Map<ConsentType, ConsentRecord> consentsFor({
-    String? guardian,
-    DateTime? signedAt,
-  }) {
-    final at = signedAt ?? DateTime.now();
-    return {
-      for (final c in ConsentType.values)
-        c: ConsentRecord(
-          type: c,
-          isSigned: true,
-          documentVersion: 'mst_consent_v2.1',
-          signedAt: at,
-          guardianName: guardian,
-          guardianRelationship: guardian != null ? 'Parent' : null,
-        ),
-    };
-  }
-
-  /// The account owner ("Self") is always the first member and cannot be removed.
-  bool isAccountOwner(String id) =>
-      subjects.isNotEmpty && subjects.first.id == id;
-
-  String newMemberId() =>
-      'subj_member_${DateTime.now().microsecondsSinceEpoch}';
-
-  /// Adds a member and makes them the active profile.
-  void addMember(SubjectProfile member) => addDependent(member);
-
-  void updateMember(String id, SubjectProfile updated) {
-    final i = subjects.indexWhere((s) => s.id == id);
-    if (i < 0) return;
-    subjects[i] = updated;
-    notifyListeners();
-  }
-
-  /// Removes a member. Returns false for the account owner or an unknown id.
-  bool removeMember(String id) {
-    final i = subjects.indexWhere((s) => s.id == id);
-    if (i <= 0) return false;
-    final activeId = activeSubject.id;
-    subjects.removeAt(i);
-    final keep = subjects.indexWhere((s) => s.id == activeId);
-    activeSubjectIndex = keep >= 0 ? keep : 0;
-    notifyListeners();
-    return true;
   }
 
   void toggleConsent(ConsentType type, bool signed, {String? guardianName}) {

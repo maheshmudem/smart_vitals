@@ -23,7 +23,7 @@ class AnaemiaUi {
   static BoxDecoration card({Color color = surface, Color? border}) {
     return BoxDecoration(
       color: color,
-      borderRadius: BorderRadius.circular(MirrorRadius.lg),
+      borderRadius: BorderRadius.circular(18),
       border: Border.all(color: border ?? outline),
       boxShadow: [
         BoxShadow(
@@ -37,7 +37,7 @@ class AnaemiaUi {
 
   static Widget sectionHeader(String title, String caption) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10, top: 6),
+      padding: const EdgeInsets.only(bottom: 10, left: 2, top: 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -45,16 +45,13 @@ class AnaemiaUi {
             title,
             style: const TextStyle(
               color: ink,
-              fontSize: 15.5,
-              fontWeight: FontWeight.w700,
+              fontSize: 16.5,
+              fontWeight: FontWeight.w800,
               letterSpacing: -0.2,
             ),
           ),
           const SizedBox(height: 2),
-          Text(
-            caption,
-            style: const TextStyle(color: muted, fontSize: 12, height: 1.35),
-          ),
+          Text(caption, style: const TextStyle(color: muted, fontSize: 12)),
         ],
       ),
     );
@@ -82,7 +79,7 @@ class AnaemiaUi {
             width: keyWidth,
             child: Text(
               key,
-              style: const TextStyle(color: muted, fontSize: 12),
+              style: const TextStyle(color: muted, fontSize: 11.5),
             ),
           ),
           const SizedBox(width: 8),
@@ -91,7 +88,7 @@ class AnaemiaUi {
               value,
               style: const TextStyle(
                 color: ink,
-                fontSize: 12.5,
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
                 height: 1.3,
               ),
@@ -121,7 +118,7 @@ class AnaemiaUi {
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(color: ink, fontSize: 13, height: 1.42),
+              style: const TextStyle(color: ink, fontSize: 12.5, height: 1.4),
             ),
           ),
           if (trailing != null) ...[const SizedBox(width: 8), trailing],
@@ -168,8 +165,8 @@ class AnaemiaUi {
                   title,
                   style: const TextStyle(
                     color: ink,
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -191,7 +188,7 @@ class AnaemiaUi {
 
   static Widget tag(String text, {Color color = primary, IconData? icon}) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(999),
@@ -210,8 +207,8 @@ class AnaemiaUi {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: color,
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
+                fontSize: 10.5,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),
@@ -241,7 +238,7 @@ class MaterialCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(MirrorRadius.lg),
+        borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
             color: const Color(0xFF0F172A).withValues(alpha: 0.04),
@@ -254,7 +251,7 @@ class MaterialCard extends StatelessWidget {
         color: color,
         clipBehavior: clipBehavior,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(MirrorRadius.lg),
+          borderRadius: BorderRadius.circular(18),
           side: const BorderSide(color: AnaemiaUi.outline),
         ),
         child: padding == null
@@ -314,7 +311,7 @@ class InfoNote extends StatelessWidget {
                   ),
                 Text(
                   text,
-                  style: TextStyle(color: color, fontSize: 12, height: 1.4),
+                  style: TextStyle(color: color, fontSize: 11.5, height: 1.35),
                 ),
               ],
             ),
@@ -438,7 +435,7 @@ class RangeGauge extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     color: AnaemiaUi.muted,
-                    fontSize: 11,
+                    fontSize: 10,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -578,7 +575,7 @@ class PrimaryBottomButton extends StatelessWidget {
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       color: AnaemiaUi.muted,
-                      fontSize: 12,
+                      fontSize: 11.5,
                     ),
                   ),
                 ),
@@ -586,30 +583,23 @@ class PrimaryBottomButton extends StatelessWidget {
                 children: [
                   if (secondaryLabel != null) ...[
                     Expanded(
-                      flex: 2,
                       child: OutlinedButton(
                         onPressed: onSecondary,
-                        child: Text(
-                          secondaryLabel!,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                        child: Text(secondaryLabel!),
                       ),
                     ),
-                    const SizedBox(width: MirrorSpace.md),
+                    const SizedBox(width: 10),
                   ],
                   Expanded(
-                    flex: 3,
+                    flex: 2,
                     child: FilledButton.icon(
                       onPressed: onPressed,
                       icon: Icon(icon, size: 20),
                       label: Text(
                         label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 15,
                         ),
                       ),
                     ),

@@ -2571,9 +2571,10 @@ class _BiometricFaceScannerPainter extends CustomPainter {
       c,
       r,
       Paint()
-        ..color = Colors.white.withValues(alpha: 0.08)
+        ..color = Colors.white.withValues(alpha: 0.14)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 14,
+        ..strokeWidth = 22
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14),
     );
     canvas.restore();
 
@@ -2642,9 +2643,10 @@ class _BiometricFaceScannerPainter extends CustomPainter {
       ..strokeWidth = 2.4
       ..strokeCap = StrokeCap.round;
     final glowPaint = Paint()
-      ..color = frameColor.withValues(alpha: 0.28)
-      ..strokeWidth = 5.5
-      ..strokeCap = StrokeCap.round;
+      ..color = frameColor.withValues(alpha: 0.5)
+      ..strokeWidth = 6
+      ..strokeCap = StrokeCap.round
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
     final sweepPaint = Paint()
       ..color = Colors.white.withValues(alpha: 0.85)
       ..strokeWidth = 2.2
@@ -2702,8 +2704,10 @@ class _BiometricFaceScannerPainter extends CustomPainter {
       );
       canvas.drawCircle(
         head,
-        8,
-        Paint()..color = frameColor.withValues(alpha: 0.35),
+        7,
+        Paint()
+          ..color = frameColor.withValues(alpha: 0.55)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
       );
       canvas.drawCircle(head, 3.4, Paint()..color = Colors.white);
     }
@@ -2762,9 +2766,10 @@ class _BiometricFaceScannerPainter extends CustomPainter {
       c,
       r,
       Paint()
-        ..color = frameColor.withValues(alpha: 0.25 * (1 - t))
+        ..color = frameColor.withValues(alpha: 0.4 * (1 - t))
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 10,
+        ..strokeWidth = 12
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12),
     );
   }
 
@@ -2870,11 +2875,12 @@ class _BiometricFaceScannerPainter extends CustomPainter {
     final base = c + dir * slide;
 
     final glow = Paint()
-      ..color = Colors.black.withValues(alpha: 0.30)
+      ..color = Colors.black.withValues(alpha: 0.45)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 8
+      ..strokeWidth = 9
       ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
+      ..strokeJoin = StrokeJoin.round
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
     final paint = Paint()
       ..color = Colors.white
       ..style = PaintingStyle.stroke
@@ -2976,11 +2982,12 @@ class _BiometricFaceScannerPainter extends CustomPainter {
     canvas.drawPath(
       check,
       Paint()
-        ..color = frameColor.withValues(alpha: 0.35)
+        ..color = frameColor.withValues(alpha: 0.7)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 14
+        ..strokeWidth = 16
         ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round,
+        ..strokeJoin = StrokeJoin.round
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10),
     );
     canvas.drawPath(
       check,
@@ -3343,7 +3350,9 @@ class _BiometricFaceScannerPainter extends CustomPainter {
         canvas.drawCircle(
           pt,
           6.0 * strength + 2,
-          Paint()..color = frameColor.withValues(alpha: 0.28 * strength),
+          Paint()
+            ..color = frameColor.withValues(alpha: 0.45 * strength)
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
         );
         canvas.drawCircle(
           pt,
@@ -3433,11 +3442,10 @@ class _MiniPulseWavePainter extends CustomPainter {
     canvas.drawPath(
       path,
       Paint()
-        ..color = color.withValues(alpha: 0.22)
+        ..color = color.withValues(alpha: 0.35)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 4
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round,
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
     );
     canvas.drawPath(
       path,

@@ -4,8 +4,6 @@ import 'package:flutter/material.dart';
 import '../../core/design_system/algorithm_outputs_section.dart';
 import '../../core/design_system/mirror_theme.dart';
 import '../../core/design_system/mirror_widgets.dart';
-import '../../core/design_system/mirror_ui.dart';
-import '../anaemia/anaemia_ui_kit.dart';
 import '../../core/domain/algorithms/caries_risk_engine.dart';
 import '../../core/domain/algorithms/marker_readings.dart';
 import '../../core/domain/entities/enums.dart';
@@ -2016,7 +2014,7 @@ class _BiometricDentalArchScannerPainter extends CustomPainter {
 }
 
 /// S-F04 Dental Tooth Chart & Caries Risk Results + S-F05 Sealant Recommendations
-/// Light card layout: oral health score, range scales,
+/// Overhauled with Dark Medical Theme, Hero Oral Health Dial, Multi-Segment Range Scales,
 /// Interactive FDI Odontogram + ICDAS Surface Inspector, and Persistent Retake / Save Dock.
 class DentalResultsScreen extends StatefulWidget {
   const DentalResultsScreen({super.key, required this.exam});
@@ -2044,14 +2042,6 @@ class _DentalResultsScreenState extends State<DentalResultsScreen> {
     return base.clamp(18, 98);
   }
 
-  void _retake() {
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute<void>(
-        builder: (_) => const DentalFlowScreen(autoStartScanner: true),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final ex = widget.exam;
@@ -2069,340 +2059,558 @@ class _DentalResultsScreenState extends State<DentalResultsScreen> {
         ? SemanticBand.moderate
         : SemanticBand.low;
 
-    const segs = [AnaemiaUi.segNormal, AnaemiaUi.segBorder, AnaemiaUi.segHigh];
-
     return Scaffold(
+      backgroundColor: const Color(0xFF070D19),
       appBar: AppBar(
-        title: const Text('Dental Report', overflow: TextOverflow.ellipsis),
+        backgroundColor: const Color(0xFF070D19),
+        foregroundColor: Colors.white,
+        title: const Text(
+          'FDI Tooth Chart & Caries Report',
+          overflow: TextOverflow.ellipsis,
+        ),
         actions: [
           IconButton(
-            tooltip: 'About this screen',
+            tooltip: 'Retake Dental Scan',
+            icon: const Icon(Icons.replay_rounded, color: Color(0xFF00E5CC)),
+            onPressed: () {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute<void>(
+                  builder: (_) =>
+                      const DentalFlowScreen(autoStartScanner: true),
+                ),
+              );
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.info_outline_rounded),
             onPressed: () => showScreenGateLifecycleSheet(context, 'S-F04'),
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: MirrorSpace.screen,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // 1. Oral health score summary
-            _buildHeroOralScoreCard(context, ex, oralScore),
-            const SizedBox(height: MirrorSpace.md),
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // 1. Hero Oral Health & Enamel Vitality Score Card
+                  _buildHeroOralScoreCard(ex, oralScore),
+                  const SizedBox(height: 14),
 
-            // 2. Urgency triage
-            UrgencyBanner(
-              urgency: ex.urgency,
-              title: 'Dental triage',
-              subtitle: ex.isPartial
-                  ? 'Partial exam (${ex.viewsCompleted}/4 views). Unseen teeth: ${ex.unseenTeethFdi.join(", ")}.'
-                  : 'All 4 views captured. ${ex.cariesRiskReason}',
-            ),
-            const SizedBox(height: MirrorSpace.xl),
+                  // 2. Urgency Triage Banner
+                  UrgencyBanner(
+                    urgency: ex.urgency,
+                    title: 'Dental Screening Triage',
+                    subtitle: ex.isPartial
+                        ? 'Partial exam (${ex.viewsCompleted}/4 views). Unseen teeth: ${ex.unseenTeethFdi.join(", ")}.'
+                        : 'Complete 4-view dental exam. Overall Caries Risk: ${ex.cariesRiskBand.label} (${ex.cariesRiskReason}).',
+                  ),
+                  const SizedBox(height: 14),
 
-            // 3. Interactive FDI tooth chart (S-F04)
-            const SectionHeader(
-              title: 'Tooth chart',
-              subtitle: 'Tap a tooth to see its finding',
-            ),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(MirrorSpace.lg),
-                child: FdiToothChartWidget(
-                  isChildMode: ex.isChildMode,
-                  findings: ex.toothFindings,
-                  unseenTeeth: ex.unseenTeethFdi,
-                  sealantTeeth: ex.sealantNeededTeethFdi,
-                  onToothSelected: (fdi) =>
-                      setState(() => _selectedToothFdi = fdi),
-                ),
-              ),
-            ),
-
-            // 4. Selected tooth inspector (S-F05)
-            if (_selectedToothFdi != null) ...[
-              const SizedBox(height: MirrorSpace.md),
-              _buildSelectedToothInspector(context, ex, selectedFinding),
-            ],
-            const SizedBox(height: MirrorSpace.xl),
-
-            // 5. Range scales (ALG-DEN-04..07)
-            const SectionHeader(
-              title: 'Teeth & gum health',
-              subtitle: 'Where your result sits on each scale',
-            ),
-            _buildDentalRangeScaleCard(
-              context,
-              title: 'Caries risk',
-              valueLabel: ex.cariesRiskBand.label,
-              subtitle: ex.cariesRiskReason,
-              markerPct: ex.cariesRiskBand == SemanticBand.low
-                  ? 0.18
-                  : (ex.cariesRiskBand == SemanticBand.moderate ? 0.52 : 0.86),
-              labels: const ['Low', 'Moderate', 'High'],
-              colors: segs,
-            ),
-            const SizedBox(height: MirrorSpace.md),
-            _buildDentalRangeScaleCard(
-              context,
-              title: 'Gum health',
-              valueLabel: gingivitisBand.label,
-              subtitle: 'Redness and swelling along the gum line',
-              markerPct: gingivitisBand == SemanticBand.low
-                  ? 0.22
-                  : (gingivitisBand == SemanticBand.moderate ? 0.55 : 0.88),
-              labels: const ['Healthy', 'Mild', 'Inflamed'],
-              colors: segs,
-            ),
-            const SizedBox(height: MirrorSpace.md),
-            _buildDentalRangeScaleCard(
-              context,
-              title: 'Plaque coverage',
-              valueLabel: plaqueBand.label,
-              subtitle: 'Visible plaque and tartar on the front of the teeth',
-              markerPct: plaqueBand == SemanticBand.low ? 0.20 : 0.54,
-              labels: const ['Clean <15%', '15–35%', 'Heavy >35%'],
-              colors: segs,
-            ),
-            const SizedBox(height: MirrorSpace.xl),
-
-            // 6. Sealant advice (ALG-DEN-05 / 07)
-            const SectionHeader(title: 'Sealant advice'),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(MirrorSpace.lg),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const IconBadge(icon: Icons.shield_outlined, size: 34),
-                        const SizedBox(width: MirrorSpace.md),
-                        Expanded(
-                          child: Text(
-                            ex.sealantNeededTeethFdi.isEmpty
-                                ? 'No back teeth need a sealant right now.'
-                                : 'These healthy molars have deep grooves. A protective sealant can prevent decay.',
-                            style: Theme.of(context).textTheme.bodyMedium,
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (ex.sealantNeededTeethFdi.isNotEmpty) ...[
-                      const SizedBox(height: MirrorSpace.md),
-                      Wrap(
-                        spacing: MirrorSpace.sm,
-                        runSpacing: MirrorSpace.sm,
-                        children: ex.sealantNeededTeethFdi
-                            .map(
-                              (fdi) => MirrorPill(
-                                label: 'Tooth $fdi',
-                                icon: Icons.shield_outlined,
-                              ),
-                            )
-                            .toList(),
+                  // 3. Interactive FDI Tooth Chart Card (S-F04)
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: FdiToothChartWidget(
+                        isChildMode: ex.isChildMode,
+                        findings: ex.toothFindings,
+                        unseenTeeth: ex.unseenTeethFdi,
+                        sealantTeeth: ex.sealantNeededTeethFdi,
+                        onToothSelected: (fdi) =>
+                            setState(() => _selectedToothFdi = fdi),
                       ),
-                    ],
+                    ),
+                  ),
+
+                  // 4. Tooth Surface & ICDAS Detail Inspector (S-F05)
+                  if (_selectedToothFdi != null) ...[
+                    const SizedBox(height: 12),
+                    _buildSelectedToothInspector(ex, selectedFinding),
                   ],
-                ),
+
+                  const SizedBox(height: 16),
+
+                  // 5. Multi-Segment Visual Range Scale Cards (Spec §7 ALG-DEN-04..07)
+                  const Text(
+                    'Clinical Dental & Periodontal Biomarkers',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 15.5,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  _buildDentalRangeScaleCard(
+                    title: 'Overall Caries Risk (ALG-DEN-06 / BR-DEN)',
+                    valueLabel: ex.cariesRiskBand.label,
+                    subtitle: ex.cariesRiskReason,
+                    markerPct: ex.cariesRiskBand == SemanticBand.low
+                        ? 0.18
+                        : (ex.cariesRiskBand == SemanticBand.moderate
+                              ? 0.52
+                              : 0.86),
+                    segments: const [
+                      ('Low Risk', Color(0xFF10B981)),
+                      ('Moderate', Color(0xFFF59E0B)),
+                      ('High Risk', Color(0xFFEF4444)),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  _buildDentalRangeScaleCard(
+                    title: 'Gingival Inflammation Index (ALG-DEN-04)',
+                    valueLabel: '${gingivitisBand.label} Band',
+                    subtitle:
+                        'Marginal gingival redness & oedema along cervical tooth contours (View 1)',
+                    markerPct: gingivitisBand == SemanticBand.low
+                        ? 0.22
+                        : (gingivitisBand == SemanticBand.moderate
+                              ? 0.55
+                              : 0.88),
+                    segments: const [
+                      ('Healthy <1.0', Color(0xFF10B981)),
+                      ('Mild 1.0–2.0', Color(0xFFF59E0B)),
+                      ('Inflamed >2.0', Color(0xFFEF4444)),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  _buildDentalRangeScaleCard(
+                    title: 'Plaque & Biofilm Coverage (ALG-DEN-04)',
+                    valueLabel: '${plaqueBand.label} Coverage',
+                    subtitle:
+                        'Visible supragingival plaque & calculus index across buccal/anterior crowns',
+                    markerPct: plaqueBand == SemanticBand.low ? 0.20 : 0.54,
+                    segments: const [
+                      ('Clean <15%', Color(0xFF10B981)),
+                      ('Moderate 15–35%', Color(0xFFF59E0B)),
+                      ('Heavy >35%', Color(0xFFEF4444)),
+                    ],
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  // 5b. Spec output markers (ALG-DEN-01..07) with their values
+                  const Text(
+                    'Algorithm Outputs (ALG-DEN-01..07)',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 15.5,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  AlgorithmOutputsSection(
+                    groups: MarkerReadings.fromDental(ex),
+                    showHeader: false,
+                  ),
+                  const SizedBox(height: 14),
+
+                  // 6. Preventive Pit & Fissure Sealant Advisor (ALG-DEN-05 / ALG-DEN-07)
+                  Card(
+                    color: const Color(0xFF0F172A),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                      side: BorderSide(
+                        color: const Color(0xFF00E5CC).withValues(alpha: 0.35),
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(
+                                Icons.shield_outlined,
+                                color: Color(0xFF00E5CC),
+                                size: 20,
+                              ),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Preventive Pit & Fissure Sealant Advisor (ALG-DEN-07)',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 14.5,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            ex.sealantNeededTeethFdi.isEmpty
+                                ? 'No first permanent molars currently flagged for sealant.'
+                                : 'Sound molars with deep occlusal fissures recommended for preventive resin sealant: FDI ${ex.sealantNeededTeethFdi.join(", ")}',
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 13,
+                              height: 1.38,
+                            ),
+                          ),
+                          if (ex.sealantNeededTeethFdi.isNotEmpty) ...[
+                            const SizedBox(height: 10),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 6,
+                              children: ex.sealantNeededTeethFdi
+                                  .map(
+                                    (fdi) => Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 5,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: const Color(
+                                          0xFF00E5CC,
+                                        ).withValues(alpha: 0.15),
+                                        borderRadius: BorderRadius.circular(99),
+                                        border: Border.all(
+                                          color: const Color(0xFF00E5CC),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        'Molar FDI $fdi • Sealant Candidate',
+                                        style: const TextStyle(
+                                          color: Color(0xFF00E5CC),
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const DisclaimerFooter(),
+                ],
               ),
             ),
-            const SizedBox(height: MirrorSpace.xl),
+          ),
 
-            // 7. Spec output markers (ALG-DEN-01..07)
-            const SectionHeader(
-              title: 'Algorithm outputs',
-              subtitle: 'Markers stored with this exam · tap a row for detail',
+          // 7. Persistent Bottom Action Dock (Retake Dental Scan + Save to Profile)
+          Container(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+            decoration: const BoxDecoration(
+              color: Color(0xFF0F172A),
+              border: Border(top: BorderSide(color: Colors.white12)),
             ),
-            AlgorithmOutputsSection(
-              groups: MarkerReadings.fromDental(ex),
-              showHeader: false,
+            child: SafeArea(
+              top: false,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        side: const BorderSide(color: Color(0xFF00E5CC)),
+                        minimumSize: const Size.fromHeight(46),
+                      ),
+                      icon: const Icon(Icons.replay_rounded, size: 18),
+                      label: const Text(
+                        'Retake Scan',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                      onPressed: () {
+                        Navigator.of(context).pushReplacement(
+                          MaterialPageRoute<void>(
+                            builder: (_) =>
+                                const DentalFlowScreen(autoStartScanner: true),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF00E5CC),
+                        foregroundColor: const Color(0xFF042F2E),
+                        minimumSize: const Size.fromHeight(46),
+                      ),
+                      icon: const Icon(Icons.check_circle_rounded, size: 18),
+                      label: const Text(
+                        'Save to Profile',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontWeight: FontWeight.w900),
+                      ),
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              '4-View Dental Exam & FDI Odontogram saved to member profile.',
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: MirrorSpace.lg),
-            const DisclaimerFooter(),
-          ],
-        ),
-      ),
-      bottomNavigationBar: PrimaryBottomButton(
-        label: 'Save to Profile',
-        icon: Icons.check_circle_rounded,
-        secondaryLabel: 'Retake Scan',
-        onSecondary: _retake,
-        onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Dental report saved to profile')),
-          );
-        },
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildHeroOralScoreCard(
-    BuildContext context,
-    DentalExamResult ex,
-    int oralScore,
-  ) {
-    final scheme = Theme.of(context).colorScheme;
-    final t = Theme.of(context).textTheme;
+  Widget _buildHeroOralScoreCard(DentalExamResult ex, int oralScore) {
     final scoreColor = oralScore >= 80
-        ? MirrorColors.successFg
-        : (oralScore >= 60 ? MirrorColors.warningFg : MirrorColors.dangerFg);
+        ? const Color(0xFF00E5CC)
+        : (oralScore >= 60 ? const Color(0xFFF59E0B) : const Color(0xFFEF4444));
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(MirrorSpace.lg),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 66,
-              height: 66,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  SizedBox(
-                    width: 62,
-                    height: 62,
-                    child: CircularProgressIndicator(
-                      value: oralScore / 100.0,
-                      strokeWidth: 6,
-                      strokeCap: StrokeCap.round,
-                      backgroundColor: scheme.surfaceContainerHighest,
-                      valueColor: AlwaysStoppedAnimation<Color>(scoreColor),
-                    ),
-                  ),
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        '$oralScore',
-                        style: t.headlineSmall?.copyWith(
-                          color: scoreColor,
-                          height: 1.0,
-                        ),
-                      ),
-                      Text('/ 100', style: t.labelSmall),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: MirrorSpace.lg),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Oral health score', style: t.titleMedium),
-                  const SizedBox(height: 2),
-                  Text(
-                    ex.isChildMode
-                        ? 'Child · 20 primary teeth'
-                        : 'Adult · 32 permanent teeth',
-                    style: t.bodySmall,
-                  ),
-                  const SizedBox(height: MirrorSpace.sm),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: [
-                      MirrorPill(
-                        label: '${ex.viewsCompleted}/4 views',
-                        icon: Icons.photo_camera_outlined,
-                      ),
-                      MirrorPill(
-                        label:
-                            '${ex.toothFindings.length} ${ex.toothFindings.length == 1 ? "finding" : "findings"}',
-                        color: scoreColor,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0F172A), Color(0xFF111C2E)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: scoreColor.withValues(alpha: 0.45)),
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 78,
+            height: 78,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                SizedBox(
+                  width: 74,
+                  height: 74,
+                  child: CircularProgressIndicator(
+                    value: oralScore / 100.0,
+                    strokeWidth: 7,
+                    backgroundColor: Colors.white12,
+                    valueColor: AlwaysStoppedAnimation<Color>(scoreColor),
+                  ),
+                ),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '$oralScore',
+                      style: TextStyle(
+                        color: scoreColor,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        height: 1.0,
+                      ),
+                    ),
+                    const Text(
+                      '/ 100',
+                      style: TextStyle(
+                        color: Colors.white54,
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  ex.isChildMode
+                      ? 'Child 20-Tooth Primary FDI Report'
+                      : 'Adult 32-Tooth Permanent FDI Report',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 15.5,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Caries Risk: ${ex.cariesRiskBand.label} • Views: ${ex.viewsCompleted}/4 • Findings: ${ex.toothFindings.length}',
+                  style: TextStyle(
+                    color: scoreColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  ex.cariesRiskReason,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white70, fontSize: 11.5),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildSelectedToothInspector(
-    BuildContext context,
     DentalExamResult ex,
     ToothFinding? selectedFinding,
   ) {
-    final scheme = Theme.of(context).colorScheme;
     final fdi = _selectedToothFdi!;
     final title = selectedFinding != null
         ? 'Tooth $fdi · ${selectedFinding.findingLabel}'
         : (ex.unseenTeethFdi.contains(fdi)
-              ? 'Tooth $fdi · Not seen in photos'
+              ? 'Tooth $fdi · Unseen (View Missing)'
               : (ex.sealantNeededTeethFdi.contains(fdi)
-                    ? 'Tooth $fdi · Healthy (sealant candidate)'
-                    : 'Tooth $fdi · Healthy'));
+                    ? 'Tooth $fdi · Sound Molar (Sealant Candidate)'
+                    : 'Tooth $fdi · Sound / Healthy'));
     final subtitle = selectedFinding != null
-        ? 'Confidence ${(selectedFinding.probability * 100).round()}% · Change: ${selectedFinding.changeVsPrevious}'
-        : 'Tap another tooth on the chart to inspect it.';
+        ? 'Confidence ${(selectedFinding.probability * 100).round()}% · Progression: ${selectedFinding.changeVsPrevious} (ALG-DEN-07)'
+        : 'Tap any other tooth on the FDI chart above to inspect.';
 
     return Card(
-      color: scheme.primary.withValues(alpha: 0.08),
+      color: MirrorColors.primaryContainer.withValues(alpha: 0.4),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: scheme.primary,
-          foregroundColor: scheme.onPrimary,
+          backgroundColor: MirrorColors.primary,
+          foregroundColor: Colors.white,
           child: Text('$fdi'),
         ),
-        title: Text(title),
-        subtitle: Text(subtitle),
+        title: Text(
+          title,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        subtitle: Text(subtitle, style: const TextStyle(color: Colors.white70)),
       ),
     );
   }
 
-  Widget _buildDentalRangeScaleCard(
-    BuildContext context, {
+  Widget _buildDentalRangeScaleCard({
     required String title,
     required String valueLabel,
     required String subtitle,
     required double markerPct,
-    required List<String> labels,
-    required List<Color> colors,
+    required List<(String, Color)> segments,
   }) {
-    final t = Theme.of(context).textTheme;
-    final pct = markerPct.clamp(0.05, 0.95);
-    final segIndex = (pct * labels.length).floor().clamp(0, labels.length - 1);
-    final pin = segIndex == 0
-        ? MirrorColors.successFg
-        : (segIndex == 1 ? MirrorColors.warningFg : MirrorColors.dangerFg);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(MirrorSpace.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+    final clampedPct = markerPct.clamp(0.05, 0.95);
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F172A),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF00E5CC).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(99),
+                ),
+                child: Text(
+                  valueLabel,
+                  style: const TextStyle(
+                    color: Color(0xFF00E5CC),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: const TextStyle(color: Colors.white60, fontSize: 11.5),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 16,
+            child: Stack(
+              alignment: Alignment.center,
               children: [
-                Expanded(child: Text(title, style: t.titleSmall)),
-                const SizedBox(width: MirrorSpace.sm),
-                MirrorPill(label: valueLabel, color: pin),
+                Row(
+                  children: segments.map((seg) {
+                    return Expanded(
+                      child: Container(
+                        height: 6,
+                        margin: const EdgeInsets.symmetric(horizontal: 1.5),
+                        decoration: BoxDecoration(
+                          color: seg.$2.withValues(alpha: 0.85),
+                          borderRadius: BorderRadius.circular(99),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                Align(
+                  alignment: Alignment((clampedPct * 2) - 1.0, 0),
+                  child: Container(
+                    width: 14,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: const Color(0xFF070D19),
+                        width: 2.5,
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
-            const SizedBox(height: 2),
-            Text(subtitle, style: t.bodySmall),
-            const SizedBox(height: MirrorSpace.md),
-            RangeGauge(
-              scale: RangeScale(
-                breakpoints: List.generate(
-                  labels.length + 1,
-                  (i) => i.toDouble(),
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: segments.map((seg) {
+              return Expanded(
+                child: Text(
+                  seg.$1,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white54,
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-                labels: labels,
-                colors: colors,
-              ),
-              value: pct * labels.length,
-              pinColor: pin,
-            ),
-          ],
-        ),
+              );
+            }).toList(),
+          ),
+        ],
       ),
     );
   }
