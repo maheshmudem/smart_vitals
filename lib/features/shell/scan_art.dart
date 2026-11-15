@@ -44,7 +44,6 @@ class _ScanArtState extends State<ScanArt> with SingleTickerProviderStateMixin {
   bool _shouldAnimate(BuildContext context) =>
       widget.animate &&
       !ScanArt._inTest &&
-      TickerMode.valuesOf(context).enabled &&
       !(MediaQuery.maybeDisableAnimationsOf(context) ?? false);
 
   @override
@@ -61,15 +60,13 @@ class _ScanArtState extends State<ScanArt> with SingleTickerProviderStateMixin {
 
   void _sync() {
     if (_shouldAnimate(context)) {
-      final c = _c ??= AnimationController(
+      _c ??= AnimationController(
         vsync: this,
         duration: const Duration(milliseconds: 2600),
-      );
-      if (!c.isAnimating) {
-        c.repeat();
-      }
+      )..repeat();
     } else {
-      _c?.stop();
+      _c?.dispose();
+      _c = null;
     }
   }
 
@@ -82,19 +79,23 @@ class _ScanArtState extends State<ScanArt> with SingleTickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final c = _c;
+    Widget paint(double t) => CustomPaint(
+      painter: _ArtPainter(
+        category: widget.category,
+        color: widget.color,
+        glow: widget.glow,
+        t: t,
+      ),
+    );
     return SizedBox.square(
       dimension: widget.size,
       child: RepaintBoundary(
-        child: CustomPaint(
-          isComplex: true,
-          willChange: c != null && c.isAnimating,
-          painter: _ArtPainter(
-            category: widget.category,
-            color: widget.color,
-            glow: widget.glow,
-            animation: c,
-          ),
-        ),
+        child: c == null
+            ? paint(0.25)
+            : AnimatedBuilder(
+                animation: c,
+                builder: (context, _) => paint(c.value),
+              ),
       ),
     );
   }
@@ -105,30 +106,18 @@ class _ArtPainter extends CustomPainter {
     required this.category,
     required this.color,
     required this.glow,
-    required this.animation,
-  }) : super(repaint: animation);
+    required this.t,
+  });
 
   final String category;
   final Color color;
   final bool glow;
-  final Animation<double>? animation;
 
   /// Loop phase 0..1.
-  double get t => animation?.value ?? 0.25;
+  final double t;
 
   late double _s;
   late Canvas _c;
-  double _lastSide = -1;
-  final Paint _fillPaint = Paint();
-  final Paint _strokePaint = Paint()
-    ..style = PaintingStyle.stroke
-    ..strokeCap = StrokeCap.round
-    ..strokeJoin = StrokeJoin.round;
-  final Paint _glowPaint = Paint()
-    ..style = PaintingStyle.stroke
-    ..strokeCap = StrokeCap.round
-    ..strokeJoin = StrokeJoin.round;
-  final Paint _dotPaint = Paint();
 
   static const _tau = math.pi * 2;
 
@@ -138,13 +127,27 @@ class _ArtPainter extends CustomPainter {
   double _wave([double phase = 0, double speed = 1]) =>
       (math.sin((t * speed - phase) * _tau) + 1) / 2;
 
-  Paint _line([double alpha = 1]) => _strokePaint
+  Paint _line([double alpha = 1]) => Paint()
     ..color = color.withValues(alpha: alpha)
-    ..strokeWidth = 3.2 * _s;
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 3.2 * _s
+    ..strokeCap = StrokeCap.round
+    ..strokeJoin = StrokeJoin.round;
 
-  Paint _thin([double alpha = 0.75]) => _strokePaint
+  Paint _thin([double alpha = 0.75]) => Paint()
     ..color = color.withValues(alpha: alpha)
-    ..strokeWidth = 2 * _s;
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 2 * _s
+    ..strokeCap = StrokeCap.round
+    ..strokeJoin = StrokeJoin.round;
+
+  Paint get _fill => Paint()
+    ..shader = RadialGradient(
+      colors: [color.withValues(alpha: 0.35), color.withValues(alpha: 0.04)],
+    ).createShader(Rect.fromLTWH(0, 0, 100 * _s, 100 * _s));
+
+  Paint _dot([double alpha = 1]) =>
+      Paint()..color = color.withValues(alpha: alpha);
 
   /// Draws [path] with a soft neon glow underneath.
   void _neon(
@@ -153,13 +156,17 @@ class _ArtPainter extends CustomPainter {
     bool thin = false,
     double alpha = 1,
   }) {
-    if (fill) _c.drawPath(path, _fillPaint);
+    if (fill) _c.drawPath(path, _fill);
     if (glow && alpha > 0.05) {
       _c.drawPath(
         path,
-        _glowPaint
-          ..color = color.withValues(alpha: 0.22 * alpha)
-          ..strokeWidth = (thin ? 6.0 : 8.5) * _s,
+        Paint()
+          ..color = color.withValues(alpha: 0.45 * alpha)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = (thin ? 5 : 7) * _s
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, 4 * _s),
       );
     }
     _c.drawPath(path, thin ? _thin(0.75 * alpha) : _line(alpha));
@@ -198,20 +205,10 @@ class _ArtPainter extends CustomPainter {
     return p;
   }
 
-  Paint _dot([double alpha = 1]) =>
-      _dotPaint..color = color.withValues(alpha: alpha);
-
   @override
   void paint(Canvas canvas, Size size) {
     _c = canvas;
-    final side = size.shortestSide;
-    _s = side / 100;
-    if (_lastSide != side) {
-      _lastSide = side;
-      _fillPaint.shader = RadialGradient(
-        colors: [color.withValues(alpha: 0.35), color.withValues(alpha: 0.04)],
-      ).createShader(Rect.fromLTWH(0, 0, side, side));
-    }
+    _s = size.shortestSide / 100;
     switch (category) {
       case 'Vitals':
         _heart();
@@ -740,7 +737,7 @@ class _ArtPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_ArtPainter old) =>
-      old.animation != animation ||
+      old.t != t ||
       old.category != category ||
       old.color != color ||
       old.glow != glow;

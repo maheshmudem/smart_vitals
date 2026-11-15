@@ -414,7 +414,7 @@ class MirrorTheme {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         margin: EdgeInsets.zero,
-        clipBehavior: Clip.none,
+        clipBehavior: Clip.antiAlias,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(MirrorRadius.lg),
           side: BorderSide(color: outline, width: 1),

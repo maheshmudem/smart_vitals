@@ -143,8 +143,6 @@ void main() {
       200,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.ensureVisible(find.byKey(const ValueKey('theme_dark')));
-    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('theme_dark')));
     await tester.pumpAndSettle();
     expect(appState.themeMode, ThemeMode.dark);

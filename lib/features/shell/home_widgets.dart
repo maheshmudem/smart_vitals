@@ -64,9 +64,8 @@ class HomeHeader extends StatelessWidget {
     final top = MediaQuery.paddingOf(context).top;
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
-      child: RepaintBoundary(
-        child: Container(
-          padding: EdgeInsets.fromLTRB(16, top + 8, 16, 16),
+      child: Container(
+        padding: EdgeInsets.fromLTRB(16, top + 8, 16, 16),
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [Color(0xFF07263A), Color(0xFF0B5F63), Color(0xFF0B7A75)],
@@ -197,7 +196,6 @@ class HomeHeader extends StatelessWidget {
             ],
           ],
         ),
-      ),
       ),
     );
   }
@@ -344,16 +342,19 @@ class ScoreRing extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final target = (score ?? 0) / 100;
-    return RepaintBoundary(
-      child: SizedBox(
-        width: size,
-        height: size,
-        child: Stack(
+    return SizedBox(
+      width: size,
+      height: size,
+      child: TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0, end: target),
+        duration: const Duration(milliseconds: 900),
+        curve: Curves.easeOutCubic,
+        builder: (context, v, _) => Stack(
           alignment: Alignment.center,
           children: [
             SizedBox.expand(
               child: CircularProgressIndicator(
-                value: score == null ? 0 : target,
+                value: score == null ? 0 : v,
                 strokeWidth: 5,
                 strokeCap: StrokeCap.round,
                 backgroundColor: Colors.white.withValues(alpha: 0.18),
@@ -361,7 +362,7 @@ class ScoreRing extends StatelessWidget {
               ),
             ),
             Text(
-              score == null ? '–' : '$score',
+              score == null ? '–' : '${(v * 100).round()}',
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 16,
@@ -520,10 +521,9 @@ class _FeaturedCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return RepaintBoundary(
-      child: Pressable(
-        child: Material(
-          borderRadius: BorderRadius.circular(22),
+    return Pressable(
+      child: Material(
+        borderRadius: BorderRadius.circular(22),
         clipBehavior: Clip.antiAlias,
         child: Ink(
           decoration: BoxDecoration(
@@ -638,7 +638,6 @@ class _FeaturedCard extends StatelessWidget {
             ),
           ),
         ),
-      ),
       ),
     );
   }

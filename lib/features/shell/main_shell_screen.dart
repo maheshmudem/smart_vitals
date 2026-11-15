@@ -2,14 +2,12 @@ import 'dart:math' as math;
 import 'scan_art.dart';
 import 'package_card.dart';
 import 'home_widgets.dart';
+import '../../core/domain/entities/case_record.dart';
 import '../../core/domain/entities/marker_envelope.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter/services.dart';
 import '../../core/design_system/mirror_motion.dart';
 import '../members/member_screens.dart';
-import '../operator/operator_home_screen.dart';
-import '../trends/trends_screen.dart';
 import '../members/member_switcher_sheet.dart';
 import '../../core/design_system/mirror_theme.dart';
 import '../../core/design_system/mirror_widgets.dart';
@@ -61,7 +59,6 @@ class MainShellScreen extends StatefulWidget {
 
 class _MainShellScreenState extends State<MainShellScreen> {
   int _tabIndex = 0;
-  final Set<int> _visitedTabs = {0};
   String _selectedCatalogueCategory = 'All';
   String _packFilter = 'All';
   String _scanQuery = '';
@@ -86,7 +83,6 @@ class _MainShellScreenState extends State<MainShellScreen> {
 
   @override
   Widget build(BuildContext context) {
-    _visitedTabs.add(_tabIndex);
     final appState = AppStateScope.of(context);
     final currentScreenId = _tabScreenIds[_tabIndex];
 
@@ -121,18 +117,10 @@ class _MainShellScreenState extends State<MainShellScreen> {
         index: _tabIndex,
         children: [
           _buildHomeTab(context, appState),
-          _visitedTabs.contains(1)
-              ? _buildHealthPackagesTab(context, appState)
-              : const SizedBox.shrink(),
-          _visitedTabs.contains(2)
-              ? _buildIndividualScreeningsTab(context, appState)
-              : const SizedBox.shrink(),
-          _visitedTabs.contains(3)
-              ? _buildHistoryAndTrendsTab(context, appState)
-              : const SizedBox.shrink(),
-          _visitedTabs.contains(4)
-              ? _buildMoreAndArchitectureTab(context, appState)
-              : const SizedBox.shrink(),
+          _buildHealthPackagesTab(context, appState),
+          _buildIndividualScreeningsTab(context, appState),
+          _buildHistoryAndTrendsTab(context, appState),
+          _buildMoreAndArchitectureTab(context, appState),
         ],
       ),
       bottomNavigationBar: DecoratedBox(
@@ -232,6 +220,7 @@ class _MainShellScreenState extends State<MainShellScreen> {
   Widget _buildHomeTab(BuildContext context, AppState appState) {
     final subj = appState.activeSubject;
     final latestVitals = appState.vitalsSessions.firstOrNull;
+    final topCase = appState.cases.firstOrNull;
     final first = subj.fullName.split(' ').first;
     final score = _healthScore(latestVitals);
 
@@ -270,7 +259,6 @@ class _MainShellScreenState extends State<MainShellScreen> {
     const gap = SizedBox(height: MirrorSpace.xl);
 
     return ListView(
-      scrollCacheExtent: const ScrollCacheExtent.pixels(600),
       padding: const EdgeInsets.only(bottom: MirrorSpace.xxl),
       children: [
         FadeSlideIn(
@@ -362,9 +350,21 @@ class _MainShellScreenState extends State<MainShellScreen> {
         ),
         gap,
 
+        // Open clinical case
+        if (topCase != null) ...[
+          FadeSlideIn(
+            index: 4,
+            child: Padding(
+              padding: gutter,
+              child: _buildCaseAlert(context, topCase),
+            ),
+          ),
+          gap,
+        ],
+
         // Curated packages
         FadeSlideIn(
-          index: 4,
+          index: 5,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -398,7 +398,7 @@ class _MainShellScreenState extends State<MainShellScreen> {
         if (latestVitals != null) ...[
           gap,
           FadeSlideIn(
-            index: 5,
+            index: 6,
             child: Padding(
               padding: gutter,
               child: Column(
@@ -416,46 +416,34 @@ class _MainShellScreenState extends State<MainShellScreen> {
                       );
                     },
                   ),
-                  () {
-                    final raw = [
-                      for (final code in const [
-                        'HR',
-                        'RR',
-                        'BAEVSKY_SI',
-                        'MAP',
-                      ])
-                        if (latestVitals.markers[code] != null)
-                          MetricTile(marker: latestVitals.markers[code]!),
-                    ];
-                    // Keep full rows only, so the grid never has a gap.
-                    final tiles = raw.length > 1 && raw.length.isOdd
-                        ? raw.sublist(0, raw.length - 1)
-                        : raw;
-                    return Column(
-                      children: [
-                        for (var i = 0; i < tiles.length; i += 2) ...[
-                          if (i > 0) const SizedBox(height: 10),
-                          SizedBox(
-                            height: 104,
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Expanded(
-                                  child: RepaintBoundary(child: tiles[i]),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: i + 1 < tiles.length
-                                      ? RepaintBoundary(child: tiles[i + 1])
-                                      : const SizedBox.shrink(),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ],
-                    );
-                  }(),
+                  GridView(
+                    shrinkWrap: true,
+                    padding: EdgeInsets.zero,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          mainAxisSpacing: 10,
+                          crossAxisSpacing: 10,
+                          mainAxisExtent: 104,
+                        ),
+                    children: () {
+                      final tiles = [
+                        for (final code in const [
+                          'HR',
+                          'RR',
+                          'BAEVSKY_SI',
+                          'MAP',
+                        ])
+                          if (latestVitals.markers[code] != null)
+                            MetricTile(marker: latestVitals.markers[code]!),
+                      ];
+                      // Keep full rows only, so the grid never has a gap.
+                      return tiles.length > 1 && tiles.length.isOdd
+                          ? tiles.sublist(0, tiles.length - 1)
+                          : tiles;
+                    }(),
+                  ),
                 ],
               ),
             ),
@@ -635,6 +623,66 @@ class _MainShellScreenState extends State<MainShellScreen> {
     ];
   }
 
+  Widget _buildCaseAlert(BuildContext context, CaseRecord topCase) {
+    final t = Theme.of(context).textTheme;
+    final urgent =
+        topCase.highestUrgency.priority >= UrgencyLevel.urgent.priority;
+    final fg = urgent ? MirrorColors.dangerFg : MirrorColors.warningFg;
+    final bg = urgent ? MirrorColors.dangerBg : MirrorColors.warningBg;
+    return Pressable(
+      child: Material(
+        color: bg,
+        borderRadius: BorderRadius.circular(MirrorRadius.lg),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          key: const ValueKey('home_case_alert'),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(builder: (_) => const CasesListScreen()),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: fg.withValues(alpha: 0.14),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.priority_high_rounded, color: fg),
+                ),
+                const SizedBox(width: MirrorSpace.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${topCase.highestUrgency.label} · ${topCase.conditionTitle}',
+                        style: t.titleSmall?.copyWith(color: fg),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Confirm with: ${topCase.confirmatorySpec.investigations}',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: t.bodySmall?.copyWith(
+                          color: fg.withValues(alpha: 0.85),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: MirrorSpace.sm),
+                Icon(Icons.chevron_right_rounded, color: fg),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildHorizontalPackageCard(
     BuildContext context,
     AppState appState,
@@ -694,7 +742,6 @@ class _MainShellScreenState extends State<MainShellScreen> {
               .toList();
 
     return ListView(
-      scrollCacheExtent: const ScrollCacheExtent.pixels(600),
       padding: MirrorSpace.screen,
       children: [
         PageHeading(
@@ -731,34 +778,54 @@ class _MainShellScreenState extends State<MainShellScreen> {
           ),
         ),
         const SizedBox(height: MirrorSpace.lg),
-        if (showAll) ...[
-          PackageHeroCard(
-            package: featured,
-            onOpen: () => _openPackage(context, featured),
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 250),
+          switchInCurve: Curves.easeOutCubic,
+          layoutBuilder: (current, previous) => Stack(
+            alignment: Alignment.topCenter,
+            children: [...previous, ?current],
           ),
-          const SizedBox(height: MirrorSpace.xl),
-        ],
-        SectionHeader(
-          title: showAll ? 'All packs' : '$_packFilter packs',
-          subtitle: '${list.length} ${list.length == 1 ? "pack" : "packs"}',
+          child: Column(
+            key: ValueKey(_packFilter),
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (showAll) ...[
+                FadeSlideIn(
+                  child: PackageHeroCard(
+                    package: featured,
+                    onOpen: () => _openPackage(context, featured),
+                  ),
+                ),
+                const SizedBox(height: MirrorSpace.xl),
+              ],
+              SectionHeader(
+                title: showAll ? 'All packs' : '$_packFilter packs',
+                subtitle:
+                    '${list.length} ${list.length == 1 ? "pack" : "packs"}',
+              ),
+              if (list.isEmpty)
+                const EmptyState(
+                  icon: Icons.inventory_2_outlined,
+                  title: 'No packs here yet',
+                )
+              else
+                for (var i = 0; i < list.length; i++)
+                  Padding(
+                    padding: EdgeInsets.only(
+                      bottom: i == list.length - 1 ? 0 : MirrorSpace.md,
+                    ),
+                    child: FadeSlideIn(
+                      index: i + 1,
+                      child: PackageShowcaseCard(
+                        package: list[i],
+                        scanIcons: _scanIconsFor(list[i]),
+                        onOpen: () => _openPackage(context, list[i]),
+                      ),
+                    ),
+                  ),
+            ],
+          ),
         ),
-        if (list.isEmpty)
-          const EmptyState(
-            icon: Icons.inventory_2_outlined,
-            title: 'No packs here yet',
-          )
-        else
-          for (var i = 0; i < list.length; i++)
-            Padding(
-              padding: EdgeInsets.only(
-                bottom: i == list.length - 1 ? 0 : MirrorSpace.md,
-              ),
-              child: PackageShowcaseCard(
-                package: list[i],
-                scanIcons: _scanIconsFor(list[i]),
-                onOpen: () => _openPackage(context, list[i]),
-              ),
-            ),
       ],
     );
   }
@@ -818,10 +885,8 @@ class _MainShellScreenState extends State<MainShellScreen> {
         i.subtitle.toLowerCase().contains(q) ||
         i.category.toLowerCase().contains(q) ||
         i.hardwareNeeded.toLowerCase().contains(q);
-    final outcomesById = <String, List<GateCheckOutcome>>{
-      for (final i in all) i.id: appState.evaluateGatesForItem(i),
-    };
-    bool eligible(ScreeningCatalogueItem i) => (outcomesById[i.id] ?? const [])
+    bool eligible(ScreeningCatalogueItem i) => appState
+        .evaluateGatesForItem(i)
         .every((o) => o.passed || o.isAdvisoryOnly);
 
     final browsing =
@@ -861,32 +926,38 @@ class _MainShellScreenState extends State<MainShellScreen> {
               child: _Glow(color: Color(0xFF7C3AED), size: 260),
             ),
             ListView(
-              scrollCacheExtent: const ScrollCacheExtent.pixels(600),
               padding: EdgeInsets.fromLTRB(16, top + 14, 16, 28),
               children: [
                 _immersiveHeader(context, appState, all.length, available),
                 SizedBox(height: 12),
                 _availabilityFilter(all.length, available),
                 SizedBox(height: 20),
-                if (browsing)
-                  ..._scanResultsItems(
-                    context,
-                    appState,
-                    all
-                        .where(
-                          (i) =>
-                              (_selectedCatalogueCategory == 'All' ||
-                                  i.category == _selectedCatalogueCategory) &&
-                              matches(i) &&
-                              availOk(i),
+                AnimatedSwitcher(
+                  duration: Duration(milliseconds: 260),
+                  switchInCurve: Curves.easeOutCubic,
+                  layoutBuilder: (current, previous) => Stack(
+                    alignment: Alignment.topCenter,
+                    children: [...previous, ?current],
+                  ),
+                  child: browsing
+                      ? _scanResults(
+                          context,
+                          appState,
+                          all
+                              .where(
+                                (i) =>
+                                    (_selectedCatalogueCategory == 'All' ||
+                                        i.category ==
+                                            _selectedCatalogueCategory) &&
+                                    matches(i) &&
+                                    availOk(i),
+                              )
+                              .toList(),
+                          q,
+                          eligible,
                         )
-                        .toList(),
-                    q,
-                    eligible,
-                    outcomesById,
-                  )
-                else
-                  ..._scanOverviewItems(context, appState, all, eligible),
+                      : _scanOverview(context, appState, all, eligible),
+                ),
               ],
             ),
           ],
@@ -1039,7 +1110,7 @@ class _MainShellScreenState extends State<MainShellScreen> {
   }
 
   /// Overview: quick-start carousel + illustrated body-area tiles.
-  List<Widget> _scanOverviewItems(
+  Widget _scanOverview(
     BuildContext context,
     AppState appState,
     List<ScreeningCatalogueItem> all,
@@ -1059,66 +1130,61 @@ class _MainShellScreenState extends State<MainShellScreen> {
           .firstOrNull;
       if (pick != null) quick.add(pick);
     }
-    final recent = _recentSection(context, appState);
 
-    Widget buildAreaTile(int idx) {
-      final c = _homeCategories[idx];
-      final items = all.where((s) => s.category == c.category).toList();
-      return RepaintBoundary(
-        child: _areaTile(
-          c.category,
-          c.label,
-          items.length,
-          items.where(eligible).length,
-        ),
-      );
-    }
-
-    return [
-      ?recent,
-      if (quick.isNotEmpty) ...[
-        _darkSectionTitle('Quick start'),
-        SizedBox(
-          height: 196,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            clipBehavior: Clip.none,
-            itemCount: quick.length,
-            separatorBuilder: (_, _) => const SizedBox(width: 12),
-            itemBuilder: (context, i) => RepaintBoundary(
-              child: _quickStartCard(context, appState, quick[i]),
+    return Column(
+      key: ValueKey('scans_overview'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ?_recentSection(context, appState),
+        if (quick.isNotEmpty) ...[
+          _darkSectionTitle('Quick start'),
+          SizedBox(
+            height: 196,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              clipBehavior: Clip.none,
+              itemCount: quick.length,
+              separatorBuilder: (_, _) => SizedBox(width: 12),
+              itemBuilder: (context, i) => FadeSlideIn(
+                index: i,
+                child: _quickStartCard(context, appState, quick[i]),
+              ),
             ),
           ),
+          SizedBox(height: 24),
+        ],
+        _darkSectionTitle(
+          'Body areas',
+          action: 'All ${all.length}',
+          onTap: () => setState(() => _scanBrowseAll = true),
         ),
-        const SizedBox(height: 24),
+        GridView.builder(
+          shrinkWrap: true,
+          padding: EdgeInsets.zero,
+          physics: NeverScrollableScrollPhysics(),
+          itemCount: _homeCategories.length,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            mainAxisExtent: 118,
+          ),
+          itemBuilder: (context, i) {
+            final c = _homeCategories[i];
+            final items = all.where((s) => s.category == c.category).toList();
+            return FadeSlideIn(
+              index: i + 2,
+              child: _areaTile(
+                c.category,
+                c.label,
+                items.length,
+                items.where(eligible).length,
+              ),
+            );
+          },
+        ),
       ],
-      _darkSectionTitle(
-        'Body areas',
-        action: 'All ${all.length}',
-        onTap: () => setState(() => _scanBrowseAll = true),
-      ),
-      for (var i = 0; i < _homeCategories.length; i += 2)
-        Padding(
-          padding: EdgeInsets.only(
-            bottom: i + 2 < _homeCategories.length ? 12 : 0,
-          ),
-          child: SizedBox(
-            height: 118,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(child: buildAreaTile(i)),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: i + 1 < _homeCategories.length
-                      ? buildAreaTile(i + 1)
-                      : const SizedBox.shrink(),
-                ),
-              ],
-            ),
-          ),
-        ),
-    ];
+    );
   }
 
   Widget _quickStartCard(
@@ -1240,12 +1306,7 @@ class _MainShellScreenState extends State<MainShellScreen> {
                 Positioned(
                   right: 8,
                   top: 10,
-                  child: ScanArt(
-                    category: category,
-                    color: neon,
-                    size: 56,
-                    glow: false,
-                  ),
+                  child: ScanArt(category: category, color: neon, size: 56),
                 ),
                 Padding(
                   padding: EdgeInsets.fromLTRB(14, 14, 14, 12),
@@ -1289,14 +1350,13 @@ class _MainShellScreenState extends State<MainShellScreen> {
     );
   }
 
-  /// Drill-in: illustrated banner, chips and a lazily culled glass list.
-  List<Widget> _scanResultsItems(
+  /// Drill-in: illustrated banner, chips and a glass list.
+  Widget _scanResults(
     BuildContext context,
     AppState appState,
     List<ScreeningCatalogueItem> items,
     String q,
     bool Function(ScreeningCatalogueItem) eligible,
-    Map<String, List<GateCheckOutcome>> outcomesById,
   ) {
     final single = _selectedCatalogueCategory != 'All' && q.isEmpty;
     final neon = single ? _neon(_selectedCatalogueCategory) : _accent;
@@ -1321,160 +1381,166 @@ class _MainShellScreenState extends State<MainShellScreen> {
       });
     }
 
-    return [
-      RepaintBoundary(
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(8, 8, 14, 16),
-          decoration: _glass(tint: neon),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    TextButton.icon(
-                      key: const ValueKey('scans_back'),
-                      onPressed: back,
-                      style: TextButton.styleFrom(
-                        foregroundColor: _ink,
-                        minimumSize: const Size(0, 32),
-                        padding: const EdgeInsets.symmetric(horizontal: 6),
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    return Column(
+      key: ValueKey('scans_results_$_selectedCatalogueCategory|$q'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        FadeSlideIn(
+          child: Container(
+            padding: EdgeInsets.fromLTRB(8, 8, 14, 16),
+            decoration: _glass(tint: neon),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TextButton.icon(
+                        key: ValueKey('scans_back'),
+                        onPressed: back,
+                        style: TextButton.styleFrom(
+                          foregroundColor: _ink,
+                          minimumSize: Size(0, 32),
+                          padding: EdgeInsets.symmetric(horizontal: 6),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        icon: Icon(Icons.arrow_back_rounded, size: 18),
+                        label: Text('Body areas'),
                       ),
-                      icon: const Icon(Icons.arrow_back_rounded, size: 18),
-                      label: const Text('Body areas'),
-                    ),
-                    const SizedBox(height: 10),
-                    Padding(
-                      padding: const EdgeInsets.only(left: 6),
-                      child: Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: _ink,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.4,
+                      SizedBox(height: 10),
+                      Padding(
+                        padding: EdgeInsets.only(left: 6),
+                        child: Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: _ink,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.4,
+                          ),
                         ),
                       ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(left: 6, top: 2),
-                      child: Text(
-                        '${items.length} ${items.length == 1 ? "scan" : "scans"} · $ready ready',
-                        style: TextStyle(color: _inkMuted, fontSize: 12.5),
+                      Padding(
+                        padding: EdgeInsets.only(left: 6, top: 2),
+                        child: Text(
+                          '${items.length} ${items.length == 1 ? "scan" : "scans"} · $ready ready',
+                          style: TextStyle(color: _inkMuted, fontSize: 12.5),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              if (single)
-                ScanArt(
-                  category: _selectedCatalogueCategory,
-                  color: neon,
-                  size: 84,
-                )
-              else
-                Icon(
-                  q.isNotEmpty ? Icons.search_rounded : Icons.apps_rounded,
-                  size: 56,
-                  color: neon,
-                ),
-            ],
+                if (single)
+                  ScanArt(
+                    category: _selectedCatalogueCategory,
+                    color: neon,
+                    size: 84,
+                  )
+                else
+                  Icon(
+                    q.isNotEmpty ? Icons.search_rounded : Icons.apps_rounded,
+                    size: 56,
+                    color: neon,
+                  ),
+              ],
+            ),
           ),
         ),
-      ),
-      const SizedBox(height: 14),
-      SizedBox(
-        height: 34,
-        child: ListView.separated(
-          scrollDirection: Axis.horizontal,
-          itemCount: VitalsMirrorCatalogRegistry.categories.length,
-          separatorBuilder: (_, _) => const SizedBox(width: 8),
-          itemBuilder: (context, i) {
-            final cat = VitalsMirrorCatalogRegistry.categories[i];
-            final selected = cat == _selectedCatalogueCategory;
-            return InkWell(
-              borderRadius: BorderRadius.circular(MirrorRadius.pill),
-              onTap: () {
-                HapticFeedback.selectionClick();
-                setState(() {
-                  _selectedCatalogueCategory = cat;
-                  if (cat == 'All') _scanBrowseAll = true;
-                });
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: selected ? _accent : _glassFill,
-                  borderRadius: BorderRadius.circular(MirrorRadius.pill),
-                  border: Border.all(color: selected ? _accent : _glassLine),
+        SizedBox(height: 14),
+        SizedBox(
+          height: 34,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: VitalsMirrorCatalogRegistry.categories.length,
+            separatorBuilder: (_, _) => SizedBox(width: 8),
+            itemBuilder: (context, i) {
+              final cat = VitalsMirrorCatalogRegistry.categories[i];
+              final selected = cat == _selectedCatalogueCategory;
+              return InkWell(
+                borderRadius: BorderRadius.circular(MirrorRadius.pill),
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  setState(() {
+                    _selectedCatalogueCategory = cat;
+                    if (cat == 'All') _scanBrowseAll = true;
+                  });
+                },
+                child: AnimatedContainer(
+                  duration: Duration(milliseconds: 200),
+                  padding: EdgeInsets.symmetric(horizontal: 14),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: selected ? _accent : _glassFill,
+                    borderRadius: BorderRadius.circular(MirrorRadius.pill),
+                    border: Border.all(color: selected ? _accent : _glassLine),
+                  ),
+                  child: Text(
+                    cat,
+                    style: TextStyle(
+                      color: selected ? _onNeon : _ink,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
-                child: Text(
-                  cat,
+              );
+            },
+          ),
+        ),
+        SizedBox(height: 16),
+        if (items.isEmpty)
+          Container(
+            padding: EdgeInsets.symmetric(vertical: 32, horizontal: 24),
+            decoration: _glass(),
+            child: Column(
+              children: [
+                Icon(Icons.search_off_rounded, size: 40, color: _inkMuted),
+                SizedBox(height: 10),
+                Text(
+                  'No screenings found',
                   style: TextStyle(
-                    color: selected ? _onNeon : _ink,
-                    fontSize: 12.5,
+                    color: _ink,
+                    fontSize: 15,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-              ),
-            );
-          },
-        ),
-      ),
-      const SizedBox(height: 16),
-      if (items.isEmpty)
-        Container(
-          padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
-          decoration: _glass(),
-          child: Column(
-            children: [
-              Icon(Icons.search_off_rounded, size: 40, color: _inkMuted),
-              const SizedBox(height: 10),
-              Text(
-                'No screenings found',
-                style: TextStyle(
-                  color: _ink,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
+                SizedBox(height: 4),
+                Text(
+                  q.isEmpty
+                      ? 'Try another body area.'
+                      : 'Nothing matches "$_scanQuery".',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: _inkMuted, fontSize: 12.5),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                q.isEmpty
-                    ? 'Try another body area.'
-                    : 'Nothing matches "$_scanQuery".',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: _inkMuted, fontSize: 12.5),
-              ),
-            ],
-          ),
-        )
-      else
-        for (var i = 0; i < items.length; i++)
-          Padding(
-            padding: EdgeInsets.only(bottom: i == items.length - 1 ? 0 : 8),
-            child: RepaintBoundary(
-              child: Container(
-                decoration: _glass(radius: 18),
-                child: Material(
-                  type: MaterialType.transparency,
-                  child: _scanListRow(
-                    context,
-                    appState,
-                    items[i],
-                    showCategory: !single,
-                    outcomes: outcomesById[items[i].id],
-                  ),
-                ),
+              ],
+            ),
+          )
+        else
+          FadeSlideIn(
+            index: 1,
+            child: Container(
+              decoration: _glass(),
+              child: Column(
+                children: [
+                  for (var i = 0; i < items.length; i++) ...[
+                    if (i > 0)
+                      Divider(indent: 70, height: 1, color: _glassLine),
+                    _scanListRow(
+                      context,
+                      appState,
+                      items[i],
+                      showCategory: !single,
+                    ),
+                  ],
+                ],
               ),
             ),
           ),
-    ];
+      ],
+    );
   }
 
   /// Glass list row with a mini illustration and neon play button.
@@ -1483,11 +1549,10 @@ class _MainShellScreenState extends State<MainShellScreen> {
     AppState appState,
     ScreeningCatalogueItem item, {
     bool showCategory = false,
-    List<GateCheckOutcome>? outcomes,
   }) {
-    final resolvedOutcomes = outcomes ?? appState.evaluateGatesForItem(item);
-    final ok = resolvedOutcomes.every((o) => o.passed || o.isAdvisoryOnly);
-    final blocker = resolvedOutcomes
+    final outcomes = appState.evaluateGatesForItem(item);
+    final ok = outcomes.every((o) => o.passed || o.isAdvisoryOnly);
+    final blocker = outcomes
         .where((o) => !o.passed && !o.isAdvisoryOnly)
         .firstOrNull;
     final neon = _neon(item.category);
@@ -1496,10 +1561,9 @@ class _MainShellScreenState extends State<MainShellScreen> {
         ? '${showCategory ? "${item.category} · " : ""}${item.durationLabel} · $sensor'
         : (blocker?.reason ?? 'Not available');
     void open() =>
-        _openCatalogueItem(context, appState, item, outcomes: resolvedOutcomes);
+        _openCatalogueItem(context, appState, item, outcomes: outcomes);
 
     return InkWell(
-      borderRadius: BorderRadius.circular(18),
       onTap: () => _showScanPreview(context, appState, item),
       child: Padding(
         padding: EdgeInsets.fromLTRB(12, 12, 12, 12),
@@ -2372,7 +2436,6 @@ class _MainShellScreenState extends State<MainShellScreen> {
               child: _Glow(color: Color(0xFF4C5BD4), size: 260),
             ),
             ListView(
-              scrollCacheExtent: const ScrollCacheExtent.pixels(600),
               padding: EdgeInsets.fromLTRB(16, top + 14, 16, 28),
               children: [
                 // Header
@@ -2665,183 +2728,195 @@ class _MainShellScreenState extends State<MainShellScreen> {
               .where((c) => c.id == e.redoId)
               .firstOrNull;
 
-    return Stack(
-      children: [
-        Padding(
-          padding: EdgeInsets.only(left: 30, bottom: isLast ? 0 : 10),
-          child: Pressable(
-            child: Material(
-              color: Colors.transparent,
-              child: Ink(
-                decoration: _glass(radius: 18),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(18),
-                  onTap: e.onView,
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 46,
-                          height: 46,
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: neon.withValues(alpha: 0.10),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: ScanArt(
-                            category: e.category,
-                            color: neon,
-                            glow: false,
-                            animate: false,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                e.title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: _ink,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                ),
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Rail
+          // Rail: dot centred on the card, line joining the day's results.
+          SizedBox(
+            width: 20,
+            child: Column(
+              children: [
+                Expanded(
+                  child: isFirst
+                      ? const SizedBox()
+                      : Container(width: 2, color: _glassLine),
+                ),
+                Container(
+                  width: 12,
+                  height: 12,
+                  margin: const EdgeInsets.symmetric(vertical: 3),
+                  decoration: BoxDecoration(
+                    color: bandColor,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: _scanDark ? const Color(0xFF0A1226) : Colors.white,
+                      width: 2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: bandColor.withValues(alpha: 0.45),
+                        blurRadius: 8,
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: isLast
+                      ? const SizedBox()
+                      : Container(width: 2, color: _glassLine),
+                ),
+                Container(width: 2, height: isLast ? 0 : 10, color: _glassLine),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(bottom: isLast ? 0 : 10),
+              child: Pressable(
+                child: Material(
+                  color: Colors.transparent,
+                  child: Ink(
+                    decoration: _glass(radius: 18),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(18),
+                      onTap: e.onView,
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 46,
+                              height: 46,
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: neon.withValues(alpha: 0.10),
+                                borderRadius: BorderRadius.circular(14),
                               ),
-                              const SizedBox(height: 4),
-                              Row(
+                              child: ScanArt(
+                                category: e.category,
+                                color: neon,
+                                glow: false,
+                                animate: false,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 7,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: bandColor.withValues(alpha: 0.14),
-                                      borderRadius: BorderRadius.circular(
-                                        MirrorRadius.pill,
-                                      ),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          style.icon,
-                                          size: 12,
-                                          color: bandColor,
-                                        ),
-                                        const SizedBox(width: 3),
-                                        Text(
-                                          style.label,
-                                          style: TextStyle(
-                                            color: bandColor,
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                        ),
-                                      ],
+                                  Text(
+                                    e.title,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: _ink,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
-                                  const SizedBox(width: 8),
-                                  Flexible(
-                                    child: Text(
-                                      '${e.category} · ${_clock(e.at)}',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        color: _inkMuted,
-                                        fontSize: 11.5,
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 7,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: bandColor.withValues(
+                                            alpha: 0.14,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            MirrorRadius.pill,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              style.icon,
+                                              size: 12,
+                                              color: bandColor,
+                                            ),
+                                            const SizedBox(width: 3),
+                                            Text(
+                                              style.label,
+                                              style: TextStyle(
+                                                color: bandColor,
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
+                                      const SizedBox(width: 8),
+                                      Flexible(
+                                        child: Text(
+                                          '${e.category} · ${_clock(e.at)}',
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            color: _inkMuted,
+                                            fontSize: 11.5,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    _bandMeaning(e.band),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: _ink.withValues(alpha: 0.8),
+                                      fontSize: 12.5,
                                     ),
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                _bandMeaning(e.band),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: _ink.withValues(alpha: 0.8),
-                                  fontSize: 12.5,
+                            ),
+                            if (redo != null)
+                              IconButton(
+                                tooltip: 'Redo ${e.title}',
+                                onPressed: () => _openCatalogueItem(
+                                  context,
+                                  appState,
+                                  redo,
+                                  outcomes: null,
                                 ),
+                                style: IconButton.styleFrom(
+                                  backgroundColor: neon.withValues(alpha: 0.14),
+                                  foregroundColor: neon,
+                                  minimumSize: const Size(32, 32),
+                                  fixedSize: const Size(32, 32),
+                                  padding: EdgeInsets.zero,
+                                ),
+                                icon: const Icon(
+                                  Icons.replay_rounded,
+                                  size: 17,
+                                ),
+                              )
+                            else
+                              Icon(
+                                Icons.chevron_right_rounded,
+                                color: _inkMuted,
                               ),
-                            ],
-                          ),
+                          ],
                         ),
-                        if (redo != null)
-                          IconButton(
-                            tooltip: 'Redo ${e.title}',
-                            onPressed: () => _openCatalogueItem(
-                              context,
-                              appState,
-                              redo,
-                              outcomes: null,
-                            ),
-                            style: IconButton.styleFrom(
-                              backgroundColor: neon.withValues(alpha: 0.14),
-                              foregroundColor: neon,
-                              minimumSize: const Size(32, 32),
-                              fixedSize: const Size(32, 32),
-                              padding: EdgeInsets.zero,
-                            ),
-                            icon: const Icon(Icons.replay_rounded, size: 17),
-                          )
-                        else
-                          Icon(Icons.chevron_right_rounded, color: _inkMuted),
-                      ],
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
-        // Rail: dot centred on the card, line joining the day's results.
-        Positioned(
-          left: 0,
-          top: 0,
-          bottom: 0,
-          width: 20,
-          child: Column(
-            children: [
-              Expanded(
-                child: isFirst
-                    ? const SizedBox()
-                    : Container(width: 2, color: _glassLine),
-              ),
-              Container(
-                width: 12,
-                height: 12,
-                margin: const EdgeInsets.symmetric(vertical: 3),
-                decoration: BoxDecoration(
-                  color: bandColor,
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: _scanDark ? const Color(0xFF0A1226) : Colors.white,
-                    width: 2,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: bandColor.withValues(alpha: 0.45),
-                      blurRadius: 8,
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: isLast
-                    ? const SizedBox()
-                    : Container(width: 2, color: _glassLine),
-              ),
-              Container(width: 2, height: isLast ? 0 : 10, color: _glassLine),
-            ],
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -3122,8 +3197,11 @@ class _MainShellScreenState extends State<MainShellScreen> {
           const SizedBox(height: 12),
           SizedBox(
             height: 110,
-            child: RepaintBoundary(
-              child: CustomPaint(
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0, end: 1),
+              duration: const Duration(milliseconds: 1100),
+              curve: Curves.easeOutCubic,
+              builder: (context, p, _) => CustomPaint(
                 size: Size.infinite,
                 painter: _TrendChartPainter(
                   values: [...history, latest],
@@ -3133,7 +3211,7 @@ class _MainShellScreenState extends State<MainShellScreen> {
                   latestColor: status,
                   grid: _glassLine,
                   label: _inkMuted,
-                  progress: 1.0,
+                  progress: p,
                 ),
               ),
             ),
@@ -3266,7 +3344,6 @@ class _MainShellScreenState extends State<MainShellScreen> {
               child: _Glow(color: Color(0xFF14B8A6), size: 260),
             ),
             ListView(
-              scrollCacheExtent: const ScrollCacheExtent.pixels(600),
               padding: EdgeInsets.fromLTRB(16, top + 14, 16, 28),
               children: [
                 Text(
@@ -3390,37 +3467,6 @@ class _MainShellScreenState extends State<MainShellScreen> {
                       ),
                       onTap: () =>
                           push(const DeviceReadinessAndHardwareScreen()),
-                    ),
-                  ]),
-                ),
-                const SizedBox(height: 24),
-
-                // Operator
-                _darkSectionTitle('Tools & insights'),
-                FadeSlideIn(
-                  index: 4,
-                  child: _settingsGroup([
-                    _settingsRow(
-                      icon: Icons.badge_outlined,
-                      color: const Color(0xFF7C3AED),
-                      title: 'Operator mode',
-                      subtitle: 'Register walk-ins and add reference readings',
-                      onTap: () => push(const OperatorHomeScreen()),
-                    ),
-                    _settingsRow(
-                      key: const ValueKey('more_trends'),
-                      icon: Icons.insights_rounded,
-                      color: const Color(0xFF0B7A75),
-                      title: 'Trends',
-                      subtitle: 'Track your scan results over time',
-                      onTap: () => push(
-                        TrendsScreen(
-                          onNewScan: () {
-                            Navigator.of(context).pop();
-                            setState(() => _tabIndex = 2);
-                          },
-                        ),
-                      ),
                     ),
                   ]),
                 ),
@@ -3863,7 +3909,6 @@ class _MainShellScreenState extends State<MainShellScreen> {
   }
 
   Widget _settingsRow({
-    Key? key,
     required IconData icon,
     required Color color,
     required String title,
@@ -3876,7 +3921,6 @@ class _MainShellScreenState extends State<MainShellScreen> {
         ? null
         : (_scanDark ? Color.lerp(badge.$2, Colors.white, 0.35)! : badge.$2);
     return InkWell(
-      key: key,
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(14, 11, 10, 11),
@@ -4147,23 +4191,28 @@ class _PackageDetailAndRunnerScreenState
                           SizedBox(
                             width: 44,
                             height: 44,
-                            child: Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                SizedBox.expand(
-                                  child: CircularProgressIndicator(
-                                    value: progress,
-                                    strokeWidth: 4,
-                                    strokeCap: StrokeCap.round,
-                                    backgroundColor:
-                                        scheme.surfaceContainerHighest,
+                            child: TweenAnimationBuilder<double>(
+                              tween: Tween(begin: 0, end: progress),
+                              duration: const Duration(milliseconds: 600),
+                              curve: Curves.easeOutCubic,
+                              builder: (_, v, _) => Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  SizedBox.expand(
+                                    child: CircularProgressIndicator(
+                                      value: v,
+                                      strokeWidth: 4,
+                                      strokeCap: StrokeCap.round,
+                                      backgroundColor:
+                                          scheme.surfaceContainerHighest,
+                                    ),
                                   ),
-                                ),
-                                Text(
-                                  '${(progress * 100).round()}%',
-                                  style: t.labelMedium,
-                                ),
-                              ],
+                                  Text(
+                                    '${(v * 100).round()}%',
+                                    style: t.labelMedium,
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -4324,161 +4373,163 @@ class _PackageDetailAndRunnerScreenState
         ? scheme.primary
         : scheme.outline;
 
-    return Stack(
-      children: [
-        Padding(
-          padding: EdgeInsets.only(
-            left: 42,
-            bottom: isLast ? 0 : MirrorSpace.md,
-          ),
-          child: Card(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(MirrorRadius.lg),
-              side: BorderSide(
-                color: isNext ? scheme.primary : scheme.outline,
-                width: isNext ? 1.5 : 1,
-              ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (isNext)
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 2),
-                                child: Text(
-                                  'UP NEXT',
-                                  style: t.labelSmall?.copyWith(
-                                    color: scheme.primary,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: 0.6,
-                                  ),
-                                ),
-                              ),
-                            Text(step.title, style: t.titleSmall),
-                            const SizedBox(height: 4),
-                            Text(
-                              step.subtitle,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: t.bodySmall,
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      done
-                          ? OutlinedButton(
-                              onPressed: () =>
-                                  _launchPackageStep(context, step),
-                              style: OutlinedButton.styleFrom(
-                                minimumSize: const Size(0, 32),
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                ),
-                                textStyle: t.labelLarge,
-                              ),
-                              child: const Text('Redo'),
-                            )
-                          : FilledButton.tonal(
-                              onPressed: () =>
-                                  _launchPackageStep(context, step),
-                              style: FilledButton.styleFrom(
-                                minimumSize: const Size(0, 32),
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                ),
-                                textStyle: t.labelLarge,
-                              ),
-                              child: const Text('Start'),
-                            ),
-                    ],
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Timeline rail
+          SizedBox(
+            width: 32,
+            child: Column(
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 250),
+                  width: 30,
+                  height: 30,
+                  margin: const EdgeInsets.only(top: 12),
+                  decoration: BoxDecoration(
+                    color: done || isNext ? dotColor : scheme.surface,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: dotColor, width: 2),
                   ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      MirrorPill(
-                        label: step.durationLabel,
-                        icon: Icons.schedule_rounded,
-                      ),
-                      const SizedBox(width: 6),
-                      Flexible(
-                        child: MirrorPill(
-                          label: step.hardwareNeeded,
-                          icon: Icons.sensors_rounded,
-                          filled: false,
+                  alignment: Alignment.center,
+                  child: done
+                      ? const Icon(
+                          Icons.check_rounded,
+                          size: 16,
+                          color: Colors.white,
+                        )
+                      : Text(
+                          '${index + 1}',
+                          style: TextStyle(
+                            color: isNext
+                                ? scheme.onPrimary
+                                : scheme.onSurfaceVariant,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        // Timeline rail
-        Positioned(
-          left: 0,
-          top: 0,
-          bottom: 0,
-          width: 32,
-          child: Column(
-            children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 250),
-                width: 30,
-                height: 30,
-                margin: const EdgeInsets.only(top: 12),
-                decoration: BoxDecoration(
-                  color: done || isNext ? dotColor : scheme.surface,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: dotColor, width: 2),
                 ),
-                alignment: Alignment.center,
-                child: done
-                    ? const Icon(
-                        Icons.check_rounded,
-                        size: 16,
-                        color: Colors.white,
-                      )
-                    : Text(
-                        '${index + 1}',
-                        style: TextStyle(
-                          color: isNext
-                              ? scheme.onPrimary
-                              : scheme.onSurfaceVariant,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                        ),
+                if (!isLast)
+                  Expanded(
+                    child: Container(
+                      width: 2,
+                      margin: const EdgeInsets.symmetric(vertical: 4),
+                      decoration: BoxDecoration(
+                        color: done
+                            ? MirrorColors.successFg.withValues(alpha: 0.5)
+                            : scheme.outline,
+                        borderRadius: BorderRadius.circular(1),
                       ),
-              ),
-              if (!isLast)
-                Expanded(
-                  child: Container(
-                    width: 2,
-                    margin: const EdgeInsets.symmetric(vertical: 4),
-                    decoration: BoxDecoration(
-                      color: done
-                          ? MirrorColors.successFg.withValues(alpha: 0.5)
-                          : scheme.outline,
-                      borderRadius: BorderRadius.circular(1),
                     ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
-        ),
-      ],
+          const SizedBox(width: 10),
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(bottom: isLast ? 0 : MirrorSpace.md),
+              child: Card(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(MirrorRadius.lg),
+                  side: BorderSide(
+                    color: isNext ? scheme.primary : scheme.outline,
+                    width: isNext ? 1.5 : 1,
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (isNext)
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 2),
+                                    child: Text(
+                                      'UP NEXT',
+                                      style: t.labelSmall?.copyWith(
+                                        color: scheme.primary,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: 0.6,
+                                      ),
+                                    ),
+                                  ),
+                                Text(step.title, style: t.titleSmall),
+                                const SizedBox(height: 4),
+                                Text(
+                                  step.subtitle,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: t.bodySmall,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          done
+                              ? OutlinedButton(
+                                  onPressed: () =>
+                                      _launchPackageStep(context, step),
+                                  style: OutlinedButton.styleFrom(
+                                    minimumSize: const Size(0, 32),
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                    ),
+                                    textStyle: t.labelLarge,
+                                  ),
+                                  child: const Text('Redo'),
+                                )
+                              : FilledButton.tonal(
+                                  onPressed: () =>
+                                      _launchPackageStep(context, step),
+                                  style: FilledButton.styleFrom(
+                                    minimumSize: const Size(0, 32),
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                    ),
+                                    textStyle: t.labelLarge,
+                                  ),
+                                  child: const Text('Start'),
+                                ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          MirrorPill(
+                            label: step.durationLabel,
+                            icon: Icons.schedule_rounded,
+                          ),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: MirrorPill(
+                              label: step.hardwareNeeded,
+                              icon: Icons.sensors_rounded,
+                              filled: false,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -4747,10 +4798,10 @@ class _TrendChartPainter extends CustomPainter {
     canvas.drawPath(
       path,
       Paint()
-        ..color = line.withValues(alpha: 0.22)
+        ..color = line.withValues(alpha: 0.35)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 6
-        ..strokeCap = StrokeCap.round,
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
     );
     canvas.drawPath(
       path,

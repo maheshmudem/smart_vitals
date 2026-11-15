@@ -22,11 +22,6 @@ import 'package:algoritam/features/anaemia/anaemia_intro_screen.dart';
 import 'package:algoritam/features/dental/dental_screens.dart';
 import 'package:algoritam/features/results_cases/results_cases_screens.dart';
 import 'package:algoritam/features/members/member_screens.dart';
-import 'package:algoritam/features/operator/operator_home_screen.dart';
-import 'package:algoritam/features/trends/trends_screen.dart';
-import 'package:algoritam/features/operator/operator_new_profile_screen.dart';
-import 'package:algoritam/features/operator/operator_store.dart';
-import 'package:algoritam/features/operator/reference_readings_screen.dart';
 import 'package:algoritam/features/shell/main_shell_screen.dart';
 
 const _enabled = bool.fromEnvironment('UI_PREVIEW');
@@ -107,42 +102,6 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
   };
 
-  final opStore = OperatorStore.fresh();
-  opStore.walkIns.add(
-    WalkIn(
-      id: 'walkin_old',
-      fullName: 'Meera Shah',
-      sex: WalkInSex.female,
-      ageYears: 62,
-      phone: '99887 66554',
-      createdAt: DateTime.now().subtract(const Duration(days: 2)),
-    ),
-  );
-  final lakshmi = opStore.addWalkIn(
-    fullName: 'Lakshmi Devi',
-    sex: WalkInSex.female,
-    ageYears: 45,
-    phone: '98765 43210',
-  );
-  opStore.addReading(lakshmi, ReadingKind.haemoglobin, {'hb': 11.2});
-  opStore.addReading(lakshmi, ReadingKind.bpCuff, {
-    'sys': 146,
-    'dia': 94,
-    'pulse': 82,
-  });
-  final ravi = opStore.addWalkIn(
-    fullName: 'Ravi Kumar',
-    sex: WalkInSex.male,
-    ageYears: 58,
-  );
-  opStore.addReading(ravi, ReadingKind.oximeter, {'spo2': 97, 'pulse': 74});
-  opStore.addWalkIn(
-    fullName: 'Anjali Rao',
-    sex: WalkInSex.female,
-    ageYears: 31,
-    phone: '91234 56789',
-  );
-
   final screens = <String, (Widget, Future<void> Function(WidgetTester)?)>{
     '01_home': (const MainShellScreen(), null),
     '02_packs': (const MainShellScreen(), tab('Packs')),
@@ -213,14 +172,6 @@ void main() {
         await tester.pumpAndSettle();
       },
     ),
-    '21_operator_home': (const OperatorHomeScreen(), null),
-    '22_operator_new_profile': (const OperatorNewProfileScreen(), null),
-    '23_reference_readings': (
-      ReferenceReadingsScreen(person: OperatorStore.instance.walkIns.first),
-      null,
-    ),
-    '24_operator_walkins': (OperatorHomeScreen(store: opStore), null),
-    '25_trends': (TrendsScreen(now: DateTime(2026, 11, 13, 16)), null),
     '13_case_detail': (
       CaseDetailScreen(caseRecord: AppState().cases.first),
       null,

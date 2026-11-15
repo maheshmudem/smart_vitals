@@ -80,10 +80,9 @@ class PackageMiniCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
     final p = package;
-    return RepaintBoundary(
-      child: SizedBox(
-        width: width,
-        child: Pressable(
+    return SizedBox(
+      width: width,
+      child: Pressable(
         child: Card(
           child: InkWell(
             onTap: onOpen,
@@ -133,7 +132,6 @@ class PackageMiniCard extends StatelessWidget {
           ),
         ),
       ),
-      ),
     );
   }
 }
@@ -155,9 +153,8 @@ class PackageHeroCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = package;
     final accentText = p.gradientColors.last;
-    return RepaintBoundary(
-      child: Pressable(
-        child: Material(
+    return Pressable(
+      child: Material(
         borderRadius: BorderRadius.circular(22),
         clipBehavior: Clip.antiAlias,
         child: Ink(
@@ -275,32 +272,21 @@ class PackageHeroCard extends StatelessWidget {
                       const SizedBox(height: 14),
                       Row(
                         children: [
-                          Expanded(
-                            child: FittedBox(
-                              fit: BoxFit.scaleDown,
-                              alignment: Alignment.centerLeft,
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  _HeroStat(
-                                    value: '${p.includedCatalogueIds.length}',
-                                    label: 'scans',
-                                  ),
-                                  _HeroDivider(),
-                                  _HeroStat(
-                                    value: '${p.biomarkersCovered.length}',
-                                    label: 'markers',
-                                  ),
-                                  _HeroDivider(),
-                                  _HeroStat(
-                                    value: '${p.permissionsNeeded.length}',
-                                    label: 'checks',
-                                  ),
-                                ],
-                              ),
-                            ),
+                          _HeroStat(
+                            value: '${p.includedCatalogueIds.length}',
+                            label: 'scans',
                           ),
-                          const SizedBox(width: 8),
+                          _HeroDivider(),
+                          _HeroStat(
+                            value: '${p.biomarkersCovered.length}',
+                            label: 'markers',
+                          ),
+                          _HeroDivider(),
+                          _HeroStat(
+                            value: '${p.permissionsNeeded.length}',
+                            label: 'checks',
+                          ),
+                          const Spacer(),
                           Container(
                             padding: const EdgeInsets.fromLTRB(12, 8, 14, 8),
                             decoration: BoxDecoration(
@@ -338,7 +324,6 @@ class PackageHeroCard extends StatelessWidget {
             ),
           ),
         ),
-      ),
       ),
     );
   }
@@ -435,11 +420,9 @@ class PackageShowcaseCard extends StatelessWidget {
     final shown = scanIcons.take(5).toList();
     final more = scanIcons.length - shown.length;
 
-    return RepaintBoundary(
-      child: Pressable(
-        child: Card(
-          clipBehavior: Clip.hardEdge,
-          child: InkWell(
+    return Pressable(
+      child: Card(
+        child: InkWell(
           onTap: onOpen,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -624,7 +607,6 @@ class PackageShowcaseCard extends StatelessWidget {
             ],
           ),
         ),
-      ),
       ),
     );
   }
